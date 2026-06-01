@@ -1,0 +1,20 @@
+{
+  "name": "Claude Code Development",
+  "image": "mcr.microsoft.com/devcontainers/javascript-node:20", 
+  "features": {
+    // Recommended to explicitly include Node.js to ensure compatibility [2]
+    "ghcr.io/devcontainers/features/node:1": {},
+    // Official Anthropic feature to install Claude Code CLI globally [1, 3]
+    "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
+  },
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        // Recommended extension for working with Claude Code [1]
+        "anthropic.claude-code"
+      ]
+    }
+  },
+  // Ensure the container runs as the 'node' user provided by the base image [4]
+  "remoteUser": "node"
+}
