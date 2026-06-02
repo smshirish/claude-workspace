@@ -1,0 +1,17 @@
+{
+	"servers": {
+		"io.github.microsoft/awesome-copilot": {
+			"type": "stdio",
+			"command": "docker",
+			"args": [
+				"run",
+				"-i",
+				"--rm",
+				"ghcr.io/microsoft/mcp-dotnet-samples/awesome-copilot:1.0.2026052903"
+			],
+			"gallery": "https://api.mcp.github.com",
+			"version": "1.0.2026052903"
+		}
+	},
+	"inputs": []
+}

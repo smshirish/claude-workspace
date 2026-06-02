@@ -1,0 +1,14 @@
+spring:
+  application:
+    name: finance-app
+  thymeleaf:
+    cache: false
+
+server:
+  port: 8080
+
+finance:
+  storage:
+    users-file: ${user.home}/.finance-app/data/users.csv
+  security:
+    default-admin-password: admin123
