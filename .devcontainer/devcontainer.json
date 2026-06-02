@@ -16,5 +16,10 @@
     }
   },
   // Ensure the container runs as the 'node' user provided by the base image [4]
-  "remoteUser": "node"
+  "remoteUser": "node",
+   "runArgs": [
+    "--cap-add=NET_ADMIN",
+    "--cap-add=NET_RAW"
+  ],
+  "postCreateCommand": "sudo /usr/local/bin/init-firewall.sh"
 }
