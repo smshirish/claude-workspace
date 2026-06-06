@@ -1,0 +1,76 @@
+*   **CLAUDE.md**: Keep your `CLAUDE.md` under 200 lines. It is prepended to *every single turn*. If it’s bloated with obsolete instructions, you are paying for those tokens every time Claude says "Hello."
+
+---
+
+### 4. Optimize the "Agentic" Loop
+Claude Code's autonomy is powerful, but it can be expensive if left unchecked.
+
+| Strategy | When to use | Token Benefit |
+| :--- | :--- | :--- |
+| **/compact** | Use after a sub-task (e.g., finishing a feature) | Summarizes history, deleting verbose logs/steps. |
+| **/clear** | Use when switching from "Debugging" to "Writing" | Wipes context clean; essential for start-of-task. |
+| **Plan Mode** | Use before complex, multi-file changes | Prevents the "wrong path" execution that burns thousands of tokens. |
+| **Effort Levels** | Use `--effort low` for simple tasks | Tells Claude to make fewer tool calls and be more concise. |
+
+---
+
+### 5. Pro-Tip: The "Handoff" Workflow
+If you are in a long session and feel the token count rising, don't just clear the context and lose your progress. 
+
+1.  **Ask Claude:** "Write a `.claude/summary.md` file containing the current objective, finished tasks, pending tests, and the root cause of the current bug."
+2.  **Run `/clear`**.
+3.  **Start fresh:** "Read `.claude/summary.md` and resume work."
+
+By doing this, you move from a bloated, high-cost session to a lean, efficient one while retaining 100% of the relevant knowledge.
+
+**Would you like me to help you draft a custom `.claudeignore` or a set of shell aliases optimized for your specific project stack?**
+Choice B
+Reducing token usage in Claude Code is a critical skill because the tool maintains a "rolling context"—meaning it re-reads the conversation history and relevant files frequently. You are absolutely correct: large console outputs (like full build logs, massive test failures, or huge JSON dumps) are one of the fastest ways to burn through your token quota.
+
+Here is how you can optimize your usage and the specific role of skills and preprocessing.
+
+1. Preprocessing Console Output (The "Hook" Strategy)
+Claude Code supports Hooks, which are scripts that run automatically at specific events. Instead of letting Claude run a command and dump 2,000 lines of logs into its context, you can use a shell-level preprocessor.
+
+How it works: Instead of typing npm test, you can use a custom command or pipe that filters the noise.
+
+Example: If you only care about errors, use grep or awk to truncate the output before it hits the Claude terminal.
+
+Bash
+# Instead of letting Claude run the whole thing:
+./run_tests.sh | grep "FAIL" -A 5
+*   **The Benefit:** You turn a 50,000-token log file into a 200-token "summary" of the specific failures.
+
+---
+
+## 2. Using "Skills" for Domain Knowledge
+**Skills** (`.claude/skills/`) allow you to provide Claude with permanent "shortcut" knowledge so it doesn't have to explore your codebase manually every time.
+
+*   **Standardize Commands:** Create a skill that defines exactly how to run a "lean" build.
+*   **Architecture Maps:** A "codebase-overview" skill can describe your project structure. This prevents Claude from running `ls -R` or reading 10 `index.ts` files just to figure out where the API logic lives.
+*   **Token Saving:** Because skills are loaded once and handled efficiently during "compaction," they are much cheaper than having Claude "discover" the same information through 5 separate tool calls in every session.
+
+---
+
+## 3. Essential Token-Saving Commands
+Claude Code provides built-in "hygiene" commands to manage the context window:
+
+| Command | What it does | When to use it |
+| :--- | :--- | :--- |
+| `/compact` | Summarizes the current history and clears the "junk." | When a session gets long or you've finished a messy debugging loop. |
+| `/clear` | Wipes the entire session context. | When you are switching to a completely unrelated task. |
+| `/cost` | Shows you exactly how many tokens you've used. | Use this regularly to see which commands are "expensive." |
+
+---
+
+## 4. Best Practices for High Efficiency
+*   **The `CLAUDE.md` File:** Use this to define your "Environment & Commands." Tell Claude: *"When I ask to test, only show me the last 20 lines of the output if it fails."* This acts as a set of persistent instructions that prevents verbose behavior.
+*   **Be Specific in Prompts:**
+    *   **Bad:** "Run the tests and tell me what's wrong." (Claude will read the whole log).
+    *   **Good:** "Run the tests. If they fail, only read the specific error message and the stack trace for the first failure."
+*   **Avoid "Mixed-Mode" Sessions:** Don't try to refactor the UI and fix a database bug in the same session. The UI code will stay in the context while you work on the database, costing you tokens on every turn. Use `/clear` or start a new terminal tab.
+
+### Summary
+Yes, console output is a major "token leak." By using **Hooks** to filter output, **Skills** to avoid repetitive exploration, and the **`/compact`** command to prune history, you can often reduce your token consumption by **40–70%**.
+
+<FollowUp label="Would you like a template for a CLAUDE.md file optimized for token savings?" query="Show me an example of a CLAUDE.md file with specific instructions to minimize token usage and handle console output efficiently."/>
