@@ -1,1 +1,4 @@
 finance-app/src/main/resources/ai/
+
+# Proactively ignore all test classes to save tokens
+src/test/**/*.java
