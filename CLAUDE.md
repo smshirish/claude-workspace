@@ -1,68 +1,44 @@
-# Project Guidelines (Token-Optimized)
+# Project Guidelines
 
-## Critical Constraints for Token Management
+## Token Optimization Constraints
 
-### 1. Command Execution & Output Handling
-* **No Verbose Outputs:** Never run commands with verbose (`-v`, `--debug`, `--verbose`) flags unless explicitly requested.
-* **Truncate Logs:** If a command output exceeds 40 lines, do not read or output the entire stream. Use tailored tools (e.g., `grep`, `head`, `tail`, `awk`) to isolate relevant stack traces, errors, or changes.
-* **Build/Test Output:** When running builds or test suites (e.g., Maven, npm, pytest), only report the summary and the specific file paths/line numbers of any failures. Do not digest successful logs.
-* **Prevent Discovery Loops:** Do not run recursive listing commands (`ls -R`, `find .`) to locate files. Ask the user or refer to the architecture summary below.
+### 1. Execution & Logs
+* **No Verbose Output:** Never use `-v`, `--debug`, or `--verbose` flags unless explicitly requested.
+* **Truncate Logs:** If output > 40 lines, isolate errors/stack traces using `grep`, `head`, `tail`, or `awk`. Do not ingest successful logs.
+* **Build/Test Drops:** Only output/analyze failures (file paths, line numbers, errors). Suppress success output.
+* **No Discovery Loops:** Do not run `ls -R` or `find .`. Use the Project Map below.
 
-### 2. Context & File Hygiene
-* **Proactive Compaction:** Suggest a `/compact` command to the user immediately after a large build output is analyzed or after resolving a major bug.
-* **Targeted Reading:** Never read entire large files if you only need to look at a specific function or class. Use exact line ranges where possible.
-* **Focus Focus Focus:** Do not proactively review or refactor code outside the immediate scope of the current task.
-
----
-
-## System Architecture Quick-Map
-*Avoid running discovery commands; use this map instead.*
-
-### Stack
-- Java 21, Spring Boot 3.3, Spring Security, Thymeleaf, Maven
-- No database — persistence is a CSV file at `~/.finance-app/data/users.csv`
-- Runs on embedded Tomcat, port 8080
-
-### Package Layout (`src/main/java/com/finance/app/`)
-| Package | Role |
-|---|---|
-| `domain/model/` ||
-| `domain/port/in/` ||
-| `domain/port/out/` ||
-| `domain/exception/` ||
-| `application/service/` |implements use cases, no framework deps |
-| `infrastructure/adapter/in/web/` ||
-| `infrastructure/adapter/in/security/` ||
-| `infrastructure/adapter/out/persistence/` | `CsvFilrite for `User` |
-| `infrastructure/adapter/out/security/` |  |
-| `infrastructure/config/` | |
-
-### Key Config (`src/main/resources/`)
-- `application.yml` — port 8080, CSV path, default admin password (`admin123`)
-- `templates/` — `login.html`, `dashboard.html` (Thymeleaf)
-- `static/css/` — `style.css`
-
-
-### Run
-```bash
-mvn spring-boot:run        # starts on http://localhost:8080
-mvn test                   # full test suite
-mvn clean compile -q       # quiet build check
+### 2. Context Hygiene
+* **Proactive Compaction:** Prompt user for `/compact` immediately after analyzing large build outputs or major bug fixes.
+* **Targeted Reading:** Read specific line ranges instead of full files whenever looking for targeted functions/classes.
+* **Strict Scope:** Never review or refactor code outside the immediate task.
 
 ---
 
-## Development Commands
-*Always use these lean variants to save tokens.*
+## Project Map & Commands
 
-| Task | Lean Command (Preferred) | Notes |
-| :--- | :--- | :--- |
-| **Build Project** | `mvn clean compile -q` | `-q` suppresses normal progress logs |
-| **Run Tests** | `mvn test | grep -E "FAILURE|ERROR" -A 5` | Isolates errors instantly |
-| **Frontend Dev** | `npm run build -- --silent` | Minimizes bundler output noise |
-| **Git Status** | `git status -s` | Short format saves context space |
+### Stack & Config
+* **Backend:** Java 21, Spring Boot 3.3, Spring Security, Maven, Embedded Tomcat (Port 8080)
+* **Frontend:** Thymeleaf templates (`src/main/resources/templates/`: `login.html`, `dashboard.html`), Static CSS (`static/css/style.css`)
+* **Persistence:** No DB. Local CSV file at `~/.finance-app/data/users.csv`
+* **Properties:** `src/main/resources/application.yml` (Port 8080, CSV path, default admin creds: `admin123`)
+
+### Architecture (`src/main/java/com/finance/app/`)
+* `domain/[model|exception|port/in|port/out]` — Core domain logic and interfaces.
+* `application/service/` — Use case implementations (Zero framework dependencies).
+* `infrastructure/adapter/in/[web|security]` — Web and Security entry points.
+* `infrastructure/adapter/out/[persistence|security]` — `CsvFileAdapter` for `User`, security providers.
+* `infrastructure/config/` — Framework configuration.
+
+### Lean Commands
+* **Quiet Build:** `mvn clean compile -q`
+* **Isolate Test Failures:** `mvn test | grep -E "FAILURE|ERROR" -A 5`
+* **Run App:** `mvn spring-boot:run`
+* **Silent Frontend Build:** `npm run build -- --silent`
+* **Short Git Status:** `git status -s`
 
 ---
 
 ## Response Style
-* **Concise Code:** Provide only the specific lines or functions being modified. Do not rewrite entire files in your response unless explicitly asked.
-* **No Fluff:** Omit pleasantries, lengthy introductions, and repetitive explanations of how the code works. Let the code and brief inline comments speak for themselves.
+* **Concise Diffs:** Output only the specific lines/functions modified. Avoid rewriting unchanged blocks.
+* **No Fluff:** Omit pleasantries, intros, and conversational explanations. Rely on code and short inline comments.

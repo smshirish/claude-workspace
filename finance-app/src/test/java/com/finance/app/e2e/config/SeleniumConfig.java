@@ -15,7 +15,7 @@ public abstract class SeleniumConfig {
 
     @BeforeEach
     void setUpDriver() {
-        WebDriverManager.chromedriver().setup();
+        WebDriverManager.chromiumdriver().setup();
         ChromeOptions options = new ChromeOptions();
         options.addArguments("--headless", "--no-sandbox", "--disable-dev-shm-usage");
 
