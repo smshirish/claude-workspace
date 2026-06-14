@@ -22,7 +22,7 @@
     "--cap-add=NET_RAW"
   ],
   "postCreateCommand": [
-    "claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents 
-]
+    //"claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents ,not working, ran manually from command line in termminal
+	]
 
 }
