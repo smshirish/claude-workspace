@@ -1,12 +1,16 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org"
-      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security" lang="en">
 <head>
     <meta charset="UTF-8"/>
-    <title>Accounts</title>
+    <title>Finance App — Accounts</title>
     <link rel="stylesheet" th:href="@{/css/style.css}"/>
 </head>
 <body>
+
+<header th:replace="~{fragments/nav :: nav('accounts')}"></header>
+
+<main class="app-main">
 <h1>Bank Accounts</h1>
 
 <div th:if="${importError}" data-testid="accounts-import-error">
@@ -42,5 +46,7 @@
     </tr>
     </tbody>
 </table>
+</main>
+
 </body>
 </html>

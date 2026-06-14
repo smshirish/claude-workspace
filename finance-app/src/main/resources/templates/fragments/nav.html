@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<body>
+<header th:fragment="nav(activePage)" class="app-header">
+    <span class="app-title">Finance App</span>
+    <nav class="app-nav">
+        <a th:href="@{/dashboard}"
+           class="nav-link"
+           th:classappend="${activePage == 'dashboard'} ? 'nav-link--active'"
+           data-testid="nav-dashboard-link">Dashboard</a>
+        <a th:href="@{/accounts}"
+           class="nav-link"
+           th:classappend="${activePage == 'accounts'} ? 'nav-link--active'"
+           data-testid="nav-accounts-link">Accounts</a>
+        <span data-testid="nav-username">Welcome, <strong th:text="${username}">user</strong></span>
+        <form th:action="@{/logout}" method="post" style="display:inline">
+            <input type="hidden" th:name="${_csrf.parameterName}" th:value="${_csrf.token}"/>
+            <button type="submit" class="btn-logout" data-testid="nav-signout-button">Sign Out</button>
+        </form>
+    </nav>
+</header>
+</body>
+</html>
