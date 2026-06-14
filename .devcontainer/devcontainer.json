@@ -21,5 +21,10 @@
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW"
   ],
-  "postCreateCommand": "sudo apt-get install -y chromium && sudo /usr/local/bin/init-firewall.sh"
+  "postCreateCommand": [
+    "sudo apt-get install -y chromium ",
+    "sudo /usr/local/bin/init-firewall.sh",
+    "claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents 
+]
+
 }
