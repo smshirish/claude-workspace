@@ -24,4 +24,6 @@
 * **Silent Frontend Build:** `npm run build -- --silent`
 * **Short Git Status:** `git status -s`
 
----
+## Context Files
+- Feature plan: @.claude/context/PLAN.md
+- Handoff status: @.claude/context/HANDOFF.md
