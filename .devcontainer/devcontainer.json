@@ -23,6 +23,7 @@
   ],
   "postCreateCommand": [
     //"claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents ,not working, ran manually from command line in termminal
+    //claude plugin install voltagent-lang ,claude plugin install voltagent-qa-sec ,claude plugin install voltagent-core-dev
 	]
 
 }
