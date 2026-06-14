@@ -24,6 +24,9 @@
   "postCreateCommand": [
     //"claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents ,not working, ran manually from command line in termminal
     //claude plugin install voltagent-lang ,claude plugin install voltagent-qa-sec ,claude plugin install voltagent-core-dev
+    // sudo apt install maven
+    //sudo apt-get install -y openjdk-21-jdk-headless
+    //set java home in bashrc export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc
 	]
 
 }

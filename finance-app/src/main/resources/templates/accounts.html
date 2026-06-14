@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org"
+      xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Accounts</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+<h1>Bank Accounts</h1>
+
+<div th:if="${importError}" data-testid="accounts-import-error">
+    <p th:text="${importError}"></p>
+</div>
+
+<form method="post" action="/accounts/import" enctype="multipart/form-data" data-testid="accounts-import-form">
+    <input type="file" name="file" accept=".csv" data-testid="accounts-file-input"/>
+    <button type="submit" data-testid="accounts-import-button">Import CSV</button>
+</form>
+
+<div th:if="${#lists.isEmpty(accounts)}" data-testid="accounts-empty-state">
+    <p>No accounts imported yet. Upload a CSV file to get started.</p>
+</div>
+
+<table th:unless="${#lists.isEmpty(accounts)}" data-testid="accounts-table">
+    <thead>
+    <tr>
+        <th>Bank Name</th>
+        <th>Account Number</th>
+        <th>Account Type</th>
+        <th>Balance</th>
+        <th>Currency</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="account : ${accounts}" th:attr="data-testid='account-row-' + ${account.accountId()}">
+        <td th:text="${account.bankName()}"></td>
+        <td th:text="${account.accountNumber()}"></td>
+        <td th:text="${account.accountType()}"></td>
+        <td th:text="${account.balance()}"></td>
+        <td th:text="${account.currency()}"></td>
+    </tr>
+    </tbody>
+</table>
+</body>
+</html>

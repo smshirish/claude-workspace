@@ -10,5 +10,6 @@ server:
 finance:
   storage:
     users-file: ${user.home}/.finance-app/data/users.csv
+    accounts-file: ${user.home}/.finance-app/data/accounts.csv
   security:
     default-admin-password: admin123
