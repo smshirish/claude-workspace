@@ -24,6 +24,12 @@
 * **Silent Frontend Build:** `npm run build -- --silent`
 * **Short Git Status:** `git status -s`
 
+### E2E Testing
+- E2E tests: Node.js project under e2e/
+- Runner: `npx playwright test` (from e2e/ directory)
+- NOT the Java Playwright port — never add com.microsoft.playwright to pom.xml
+- Run backend first: `mvn spring-boot:run` then `cd e2e && npx playwright test`
+
 ## Context Files
 - Feature plan: @.claude/context/PLAN.md
 - Handoff status: @.claude/context/HANDOFF.md

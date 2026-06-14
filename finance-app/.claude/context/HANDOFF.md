@@ -119,3 +119,33 @@ To turn this from RED → GREEN, create these classes in dependency order:
 15. `src/main/resources/application.yml` — add `finance.storage.accounts-file` property
 16. `src/main/resources/templates/accounts.html` — Thymeleaf template (view name `"accounts"`, model attribute `"accounts"`, model attribute `"importError"`)
 17. `pom.xml` — add `com.opencsv:opencsv:5.9` dependency
+
+---
+
+## E2E Tests
+
+### Setup
+- Node.js Playwright project at `finance-app/e2e/`
+- Config: `e2e/playwright.config.ts` — Chromium only, baseURL `http://localhost:8080`, 1 worker
+- Login helper: `e2e/tests/helpers/auth.ts`
+- Test file: `e2e/tests/accounts.spec.ts`
+- Run command (from `e2e/` dir): `npx playwright test`
+
+### Bug fixed during E2E setup
+`src/main/resources/templates/accounts.html` used a static `action="/accounts/import"` on the import form instead of `th:action="@{/accounts/import}"`. Without `th:action`, Thymeleaf does not inject the Spring Security CSRF hidden input, causing every POST to be rejected (redirected back to `/login`). Fixed by switching to `th:action`.
+
+### Test coverage and results (all 11 passed)
+
+| Test | ACs covered | Result |
+|---|---|---|
+| AC1.1 + AC1.2: POST /accounts/import accepts a valid multipart CSV | AC1.1, AC1.2 | PASS |
+| AC1.3: Each valid row appears in the accounts list after import | AC1.3 | PASS |
+| AC1.4: Re-upload replaces all previously imported accounts | AC1.4 | PASS |
+| AC1.5: Empty CSV (header only) shows importError | AC1.5 | PASS |
+| AC1.6: CSV with unrecognised accountType shows importError | AC1.6 | PASS |
+| AC1.7: Successful import redirects to /accounts | AC1.7 | PASS |
+| AC2.1: GET /accounts renders the accounts page | AC2.1 | PASS |
+| AC2.2: Accounts table shows correct column headers after import | AC2.2 | PASS |
+| AC2.3: Shows empty-state message when no accounts are present | AC2.3 | PASS |
+| AC2.3: Empty-state element has correct data-testid and is mutually exclusive with table | AC2.3 | PASS |
+| AC2.4: Unauthenticated GET /accounts redirects to /login | AC2.4 | PASS |

@@ -13,7 +13,7 @@
     <p th:text="${importError}"></p>
 </div>
 
-<form method="post" action="/accounts/import" enctype="multipart/form-data" data-testid="accounts-import-form">
+<form method="post" th:action="@{/accounts/import}" enctype="multipart/form-data" data-testid="accounts-import-form">
     <input type="file" name="file" accept=".csv" data-testid="accounts-file-input"/>
     <button type="submit" data-testid="accounts-import-button">Import CSV</button>
 </form>
