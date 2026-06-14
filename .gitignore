@@ -1,1 +1,5 @@
 finance-app/target/
+finance-app/e2e/node_modules/
+finance-app/e2e/test-results/
+finance-app/e2e/playwright-report/
+    
