@@ -6,14 +6,19 @@ import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.io.TempDir;
 import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.boot.test.autoconfigure.web.servlet.WebMvcTest;
+import org.springframework.boot.test.autoconfigure.web.servlet.AutoConfigureMockMvc;
+import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.mock.mockito.MockBean;
 import org.springframework.mock.web.MockMultipartFile;
 import org.springframework.security.test.context.support.WithMockUser;
+import org.springframework.test.context.DynamicPropertyRegistry;
+import org.springframework.test.context.DynamicPropertySource;
 import org.springframework.test.web.servlet.MockMvc;
 
 import java.math.BigDecimal;
+import java.nio.file.Path;
 import java.util.List;
 
 import static org.mockito.BDDMockito.*;
@@ -21,8 +26,18 @@ import static org.springframework.security.test.web.servlet.request.SecurityMock
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.*;
 
-@WebMvcTest(AccountController.class)
+@SpringBootTest
+@AutoConfigureMockMvc
 class AccountControllerTest {
+
+    @TempDir
+    static Path tempDir;
+
+    @DynamicPropertySource
+    static void configureStorageFiles(DynamicPropertyRegistry registry) {
+        registry.add("finance.storage.users-file", () -> tempDir.resolve("users.csv").toString());
+        registry.add("finance.storage.accounts-file", () -> tempDir.resolve("accounts.csv").toString());
+    }
 
     @Autowired
     MockMvc mockMvc;
