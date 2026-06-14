@@ -1,125 +1,89 @@
-# Plan: Bank Accounts Overview Module
+# Plan: Shared Navigation Menu
 
 ## Feature Requirements
 
-### F1 — Import Accounts from CSV
-The user can upload a CSV file containing their bank accounts. The application parses the file and saves the accounts to a persistent `accounts.csv` store. A re-upload replaces all previously stored accounts (idempotent import).
+### F1 — Shared Navigation Fragment
+A consistent navigation bar appears on every authenticated page, allowing users to move between sections without using the browser back button.
 
 **Acceptance Criteria:**
-- AC1.1: A POST `/accounts/import` endpoint accepts a `multipart/form-data` CSV file upload.
-- AC1.2: The CSV must contain a header row with columns: `bankName`, `accountNumber`, `accountType`, `balance`, `currency`.
-- AC1.3: Each valid row is persisted as a `BankAccount` entity with a generated `accountId` and `importedAt` timestamp.
-- AC1.4: A re-upload deletes all previously stored accounts before saving the new ones.
-- AC1.5: Uploading an empty file (header only or no rows) raises an `AccountImportException` — no data is written.
-- AC1.6: A CSV with an unrecognised `accountType` value raises an `AccountImportException` with a descriptive message.
-- AC1.7: On success the user is redirected to `GET /accounts`.
+- AC1.1: A Thymeleaf fragment `fragments/nav.html` defines the nav bar once and is included by all authenticated pages.
+- AC1.2: The nav bar contains a link to **Dashboard** (`/dashboard`) and a link to **Accounts** (`/accounts`).
+- AC1.3: The currently active page link is visually distinguished (CSS class `nav-link--active`).
+- AC1.4: The nav bar retains the existing **username display** and **Sign Out** button.
+- AC1.5: `accounts.html` is updated to use the shared header/nav structure (currently it has none).
+- AC1.6: `dashboard.html` is updated to replace its inline nav with the shared fragment.
+- AC1.7: All nav links and the Sign Out button carry `data-testid` attributes per project conventions.
 
-### F2 — View All Accounts
-The user can see an overview page listing all imported bank accounts.
-
-**Acceptance Criteria:**
-- AC2.1: A `GET /accounts` endpoint renders an `accounts.html` Thymeleaf template.
-- AC2.2: The template displays a table with columns: Bank Name, Account Number, Account Type, Balance, Currency.
-- AC2.3: When no accounts have been imported, the page shows an empty-state message (no error).
-- AC2.4: The page is accessible only to authenticated users (Spring Security applies existing rules).
-
-### F3 — Persist Accounts to accounts.csv
-Imported accounts survive application restarts by being written to a dedicated CSV file on disk.
+### F2 — CSS for Navigation Links
+Nav link styles are added to `static/css/style.css` so the menu renders consistently.
 
 **Acceptance Criteria:**
-- AC3.1: Accounts are stored at the path configured by `finance.storage.accounts-file` (default: `~/.finance-app/data/accounts.csv`).
-- AC3.2: The CSV file has a fixed header: `accountId,bankName,accountNumber,accountType,balance,currency,importedAt`.
-- AC3.3: The file is created (including parent directories) on first write if it does not exist.
-- AC3.4: `findAll()` returns an empty list when the file does not exist — no exception.
+- AC2.1: Nav links use class `nav-link`; the active link additionally uses `nav-link--active`.
+- AC2.2: Styles follow the existing CSS patterns already in `style.css` (no new frameworks).
 
 ---
 
 ## Component Breakdown
 
-### Domain Layer (`domain/`)
+### Templates (`src/main/resources/templates/`)
 
-| Class / Interface | Type | Responsibility |
+| File | Change |
+|---|---|
+| `fragments/nav.html` | **New.** Thymeleaf fragment `th:fragment="nav(activePage)"`. Renders header, nav links, username, logout. |
+| `dashboard.html` | Replace inline `<header>` block with `th:replace="~{fragments/nav :: nav('dashboard')}"`. |
+| `accounts.html` | Add `<header>` via `th:replace="~{fragments/nav :: nav('accounts')}"`. Wrap body in consistent `app-main` layout. |
+
+### Fragment parameters
+
+| Parameter | Values | Used for |
 |---|---|---|
-| `AccountId` | Value Object | Type-safe UUID wrapper. `of(String)` factory + `generate()` factory. |
-| `BankAccount` | Entity | Immutable domain entity. Fields: `accountId`, `bankName`, `accountNumber`, `accountType`, `balance` (BigDecimal), `currency`, `importedAt`. Static `create(...)` factory sets `accountId` and `importedAt`. |
-| `AccountType` | Enum | `CHECKING`, `SAVINGS`, `CREDIT`, `INVESTMENT`, `OTHER` |
-| `AccountImportException` | Exception | Unchecked domain exception for parsing and import failures. |
-| `ImportAccountsUseCase` | Port (in) | `importAccounts(ImportAccountsCommand)`. Command record holds `InputStream fileContent` + `String fileName`. |
-| `GetAllAccountsUseCase` | Port (in) | `getAllAccounts() : List<BankAccount>`. |
-| `AccountRepository` | Port (out) | `saveAll(List<BankAccount>)`, `findAll()`, `deleteAll()`. |
-| `AccountFileParser` | Port (out) | `parse(InputStream, String fileName) : List<BankAccount>`. Decouples parsing technology from the use case. |
+| `activePage` | `'dashboard'`, `'accounts'` | Adds `nav-link--active` class to the matching link via `th:classappend`. |
 
-### Application Layer (`application/service/`)
+### CSS (`src/main/resources/static/css/style.css`)
 
-| Class | Responsibility |
+Add styles for:
+- `.nav-link` — base anchor style inside `.app-nav`
+- `.nav-link--active` — highlighted state (e.g. underline or bold)
+
+### `data-testid` map (per thymeleaf-templates.md rule)
+
+| Element | `data-testid` |
 |---|---|
-| `AccountApplicationService` | Implements `ImportAccountsUseCase` + `GetAllAccountsUseCase`. Orchestrates `AccountFileParser` → `AccountRepository`. No Spring/framework imports. |
-
-### Infrastructure — Driving Adapters (`infrastructure/adapter/in/web/`)
-
-| Class | Responsibility |
-|---|---|
-| `AccountController` | Spring MVC controller. `GET /accounts` → renders account list. `POST /accounts/import` → receives `MultipartFile`, wraps as command, calls use case, redirects. |
-
-### Infrastructure — Driven Adapters (`infrastructure/adapter/out/persistence/`)
-
-| Class | Responsibility |
-|---|---|
-| `AccountCsvRecord` | OpenCSV annotated POJO (`@CsvBindByName`). Maps input CSV columns → Java fields. Infrastructure-only — never crosses into domain. |
-| `OpenCsvAccountParser` | Implements `AccountFileParser`. Uses `CsvToBeanBuilder<AccountCsvRecord>`. Maps each record to `BankAccount`. Wraps `CsvException` in `AccountImportException`. |
-| `CsvFileAccountRepository` | Implements `AccountRepository`. Reads/writes `accounts.csv` via `java.nio.file`. Mirrors existing `CsvFileUserRepository` pattern. |
-
-### Configuration
-
-| Item | Detail |
-|---|---|
-| `application.yml` addition | `finance.storage.accounts-file: ${user.home}/.finance-app/data/accounts.csv` |
-| `ApplicationConfig` | Expose `AccountApplicationService` as a Spring `@Bean`, injecting `OpenCsvAccountParser` + `CsvFileAccountRepository`. |
-| Maven dependency | `com.opencsv:opencsv:5.9` |
+| Nav dashboard link | `nav-dashboard-link` |
+| Nav accounts link | `nav-accounts-link` |
+| Nav username display | `nav-username` |
+| Sign Out button | `nav-signout-button` |
 
 ---
 
 ## Test Scenarios
 
-### Unit Tests (JUnit 5 + Mockito, no Spring context)
+### E2E Tests (Playwright — `e2e/tests/nav.spec.ts`)
 
-**`BankAccountTest`**
-- T1.1: `create(...)` generates a non-null `accountId` and sets `importedAt` to a non-null value.
-- T1.2: Constructor rejects `null` for each required field with `NullPointerException`.
-- T1.3: Two `BankAccount` instances with the same `accountId` are equal.
+| Test | ACs covered |
+|---|---|
+| Authenticated user on `/dashboard` sees nav with Dashboard and Accounts links | AC1.1, AC1.2 |
+| Clicking Accounts link navigates to `/accounts` | AC1.2 |
+| Clicking Dashboard link navigates to `/dashboard` | AC1.2 |
+| Dashboard link has `nav-link--active` class when on `/dashboard` | AC1.3 |
+| Accounts link has `nav-link--active` class when on `/accounts` | AC1.3 |
+| Nav on `/accounts` shows username and Sign Out button | AC1.4, AC1.5 |
+| Sign Out button on nav logs the user out and redirects to `/login` | AC1.4 |
+| Unauthenticated access to `/dashboard` redirects to `/login` (nav not rendered) | existing security |
 
-**`ImportAccountsApplicationServiceTest`**
-- T2.1: Delegates to `AccountFileParser.parse()` and then calls `AccountRepository.saveAll()` with the result.
-- T2.2: Calls `AccountRepository.deleteAll()` before `saveAll()`.
-- T2.3: Throws `AccountImportException` when parser returns an empty list.
-- T2.4: Does not call `saveAll()` when the list is empty.
+### No unit or MockMvc tests required
+This feature contains no new backend logic. All behaviour is verifiable via E2E tests.
 
-**`GetAllAccountsApplicationServiceTest`**
-- T3.1: Returns the list from `AccountRepository.findAll()`.
-- T3.2: Returns empty list when repository returns empty — no exception.
+---
 
-**`OpenCsvAccountParserTest`**
-- T4.1: Parses a valid 3-row CSV string and returns 3 `BankAccount` instances with correct field values.
-- T4.2: Throws `AccountImportException` when a row contains an unrecognised `accountType` value.
-- T4.3: Returns empty list for a CSV with header only and no data rows.
-- T4.4: Throws `AccountImportException` when a required column is missing from the header.
-- T4.5: Correctly maps `balance` string to `BigDecimal`.
+## Implementation Order
 
-**`CsvFileAccountRepositoryTest`**
-- T5.1: `saveAll()` writes the correct header line and one CSV line per account to a temp file.
-- T5.2: `findAll()` round-trips: saved accounts are returned with all fields intact.
-- T5.3: `findAll()` returns empty list when the file does not exist.
-- T5.4: `deleteAll()` overwrites the file leaving only the header row.
-- T5.5: `saveAll()` creates parent directories if they do not exist.
-
-### Integration / Web Tests (Spring MockMvc)
-
-**`AccountControllerTest`**
-- T6.1: `GET /accounts` returns HTTP 200 and model attribute `accounts` is present.
-- T6.2: `GET /accounts` with no stored accounts renders page without error.
-- T6.3: `POST /accounts/import` with a valid `MockMultipartFile` calls `ImportAccountsUseCase` and returns a 3xx redirect to `/accounts`.
-- T6.4: `POST /accounts/import` with an empty file returns an error response or re-renders with an error message.
-- T6.5: Unauthenticated `GET /accounts` is redirected to `/login` by Spring Security.
+1. Create `src/main/resources/templates/fragments/nav.html` with `th:fragment="nav(activePage)"`.
+2. Add `.nav-link` and `.nav-link--active` CSS rules to `style.css`.
+3. Update `dashboard.html` — replace inline header with fragment include.
+4. Update `accounts.html` — add fragment include and wrap content in `app-main`.
+5. Write `e2e/tests/nav.spec.ts` E2E tests.
+6. Run `npx playwright test` (with backend running) — all tests green.
 
 ---
 
@@ -127,12 +91,7 @@ Imported accounts survive application restarts by being written to a dedicated C
 
 | Item | Reason |
 |---|---|
-| Excel (.xlsx) file support | Only CSV required; parser port design allows adding Apache POI adapter later without changing the use case. |
-| Per-user account isolation | Current architecture has no multi-user session concept beyond authentication. All accounts belong to the single logged-in user. |
-| Account editing / deletion via UI | Import replaces all data; no individual CRUD operations in this iteration. |
-| Pagination of the accounts list | Out of scope for initial overview; can be added to `GetAllAccountsUseCase` as a query parameter later. |
-| Balance aggregation / totals | Display only; no calculations or summaries in this iteration. |
-| Currency conversion | All balances displayed as-is in their original currency. |
-| Input CSV validation beyond column mapping | No business-rule validation (e.g. balance must be positive). Only structural/parse errors are caught. |
-| Database persistence | The project uses file-based CSV storage by design; no JPA/DB in scope. |
-| Async / batch import for large files | Synchronous import only; no job queue or progress tracking. |
+| Mobile hamburger / responsive collapse | No mobile breakpoint requirement yet. |
+| Role-based menu visibility | Single-user app; all authenticated users see the same nav. |
+| Breadcrumbs | Not requested. |
+| New pages / routes | Menu links only to existing routes (`/dashboard`, `/accounts`). |
