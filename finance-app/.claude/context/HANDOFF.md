@@ -1,12 +1,15 @@
-# Handoff: Shared Navigation Menu
+# Handoff: Import Accounts — CSV Row-Level Validation
 
 ## Status
-Not started. No tests written yet. No production code changed.
+In progress. See PLAN.md for full spec (schema validation + row-level validation + structured error reporting).
 
 ---
 
 ## Feature
-See PLAN.md — Shared Navigation Menu (fragments/nav.html + CSS + template updates + E2E tests).
+Add two-tier CSV validation to the Import Accounts use case:
+- Tier 1: Schema validation (header columns, order, count)
+- Tier 2: Row-level data validation (mandatory fields, enum check, BigDecimal parse)
+- Structured error model attributes (`schemaError`, `rowErrors`) surfaced in `accounts.html`
 
 ## Previous cycle
-Account use case — fully implemented and E2E verified (11/11 tests passed). See git history for details.
+Shared Navigation Menu — fully implemented and E2E verified. See git history for details.
