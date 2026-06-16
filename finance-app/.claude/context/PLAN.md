@@ -178,7 +178,82 @@ Add two new conditional blocks:
 
 ---
 
-## 5. Out of Scope
+## 5. E2E Test Plan
+
+### 5.1 Framework & Configuration
+
+**Framework:** Playwright + TypeScript — already configured in `e2e/` (no new dependencies).
+
+**Test file:** New `e2e/tests/csv-validation.spec.ts` — keeps validation scenarios separate from the existing `accounts.spec.ts` import/view tests.
+
+**Shared helpers:** Reuse `writeTempCsv()` and `login()` from the existing spec and auth helper. Centralize all CSV fixture strings in a new `e2e/tests/helpers/csvFixtures.ts` file so each test imports named constants rather than defining inline strings.
+
+**No new packages required.** The existing Playwright + Chromium setup (`playwright.config.ts`) covers all scenarios.
+
+**Breaking change in existing tests:** `AC1.6` in `accounts.spec.ts` currently asserts `data-testid="accounts-import-error"` for a bad `accountType` upload. After this feature lands, that error will surface as `data-testid="row-errors-banner"` instead. `AC1.6` must be updated to assert the new selector.
+
+---
+
+### 5.2 CSV Fixture Inventory
+
+| Constant | Header valid? | Data issues | Purpose |
+|---|---|---|---|
+| `VALID_CSV` | Yes | None | Happy path (already in `accounts.spec.ts`) |
+| `HEADER_ONLY_CSV` | Yes | No data rows | Already in `accounts.spec.ts` |
+| `MISSING_COLUMN_CSV` | No — missing `currency` | — | Schema error: missing column |
+| `EXTRA_COLUMN_CSV` | No — extra `notes` at end | — | Schema error: extra column |
+| `WRONG_ORDER_CSV` | No — `accountNumber` before `bankName` | — | Schema error: wrong order |
+| `TYPO_COLUMN_CSV` | No — `acctNumber` instead of `accountNumber` | — | Schema error: column name typo |
+| `BAD_ACCOUNT_TYPE_ROW1_CSV` | Yes | Row 1: `accountType=MORTGAGE` | Row error: invalid enum value |
+| `BLANK_BANK_NAME_ROW2_CSV` | Yes | Row 2: `bankName` is blank | Row error: mandatory field blank |
+| `BAD_BALANCE_ROW1_CSV` | Yes | Row 1: `balance=not-a-number` | Row error: unparseable BigDecimal |
+| `MULTI_ROW_ERRORS_CSV` | Yes | Rows 1–3 each have one error | Row errors: accumulation across rows |
+| `MIXED_VALID_INVALID_CSV` | Yes | Row 1 valid, Row 2 bad `accountType` | Row errors: all rows checked even after first bad one |
+
+---
+
+### 5.3 E2E Test Cases — F3: CSV Schema Validation
+
+> Maps to FR-1, AC-2, AC-3, AC-4. All tests in `describe('F3 — CSV Schema Validation')`.
+
+| ID | Scenario | CSV Fixture | Assertions |
+|---|---|---|---|
+| E2E-S1 | Missing column shows schema-error-banner | `MISSING_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; `[data-testid="row-errors-banner"]` absent; no redirect to `/accounts` |
+| E2E-S2 | Extra column shows schema-error-banner | `EXTRA_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; `[data-testid="row-errors-banner"]` absent |
+| E2E-S3 | Wrong column order shows schema-error-banner | `WRONG_ORDER_CSV` | `[data-testid="schema-error-banner"]` visible; error text names the mismatched position |
+| E2E-S4 | Column name typo shows schema-error-banner | `TYPO_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; error text references the bad column name |
+| E2E-S5 | Schema error does not import any rows | `MISSING_COLUMN_CSV` | After upload: accounts table count unchanged from before upload (pre-seed 1 row, post upload still 1 row) |
+| E2E-S6 | Schema error never co-renders row-errors-banner | `EXTRA_COLUMN_CSV` | `[data-testid="row-errors-banner"]` has count 0 in DOM |
+
+---
+
+### 5.4 E2E Test Cases — F4: CSV Row-Level Validation
+
+> Maps to FR-2, AC-5, AC-6, AC-7, AC-8, AC-9. All tests in `describe('F4 — CSV Row-Level Validation')`.
+
+| ID | Scenario | CSV Fixture | Assertions |
+|---|---|---|---|
+| E2E-R1 | Invalid accountType shows row-errors-banner | `BAD_ACCOUNT_TYPE_ROW1_CSV` | `[data-testid="row-errors-banner"]` visible; `[data-testid="row-error-1"]` visible; item text contains the bad value (`MORTGAGE`) and lists allowed values |
+| E2E-R2 | Blank mandatory field shows row error | `BLANK_BANK_NAME_ROW2_CSV` | `[data-testid="row-error-2"]` visible; text references column `bankName`; text contains "required" or "blank" |
+| E2E-R3 | Unparseable balance shows row error | `BAD_BALANCE_ROW1_CSV` | `[data-testid="row-error-1"]` visible; text references column `balance` |
+| E2E-R4 | Multiple rows with errors — all collected | `MULTI_ROW_ERRORS_CSV` | `[data-testid="row-errors-banner"] li` count equals total violation count; `data-testid="row-error-1"`, `row-error-2`, `row-error-3` all present |
+| E2E-R5 | Mixed valid/invalid rows — all rows still checked | `MIXED_VALID_INVALID_CSV` | `[data-testid="row-errors-banner"]` visible; `[data-testid="row-error-2"]` present; `[data-testid="row-error-1"]` absent (row 1 was valid) |
+| E2E-R6 | Row errors do not import any rows | `BAD_ACCOUNT_TYPE_ROW1_CSV` | After upload: accounts table count unchanged (pre-seed 1 row, post upload still 1 row) |
+| E2E-R7 | Row error never co-renders schema-error-banner | `BAD_ACCOUNT_TYPE_ROW1_CSV` | `[data-testid="schema-error-banner"]` has count 0 in DOM |
+
+---
+
+### 5.5 E2E Regression — Existing Tests That Must Be Updated
+
+| Existing test | Change required |
+|---|---|
+| `AC1.6` in `accounts.spec.ts` — "CSV with unrecognised accountType shows importError" | Change assertion from `[data-testid="accounts-import-error"]` to `[data-testid="row-errors-banner"]`; rename test description to match new behaviour |
+
+No other existing E2E tests are affected by this feature.
+
+---
+
+## 6. Out of Scope
 
 | Item | Reason |
 |---|---|
