@@ -6,7 +6,8 @@
 Before any row is processed, the incoming CSV header row must be validated against the expected template.
 
 - **Expected columns (exact names, exact order):** `bankName`, `accountNumber`, `accountType`, `balance`, `currency`
-- Reject if: any column name is wrong (case-sensitive), columns are out of order, columns are missing, or extra columns are present.
+- Reject if: any of the first five column names is wrong (case-sensitive), the required columns are out of order, or required columns are missing (fewer than five columns present).
+- **Tolerate:** Extra columns appended **beyond** the required five are silently ignored — they do not constitute a schema error and do not stop processing.
 - **Behavior:** On any schema failure, stop immediately — do not attempt row parsing. Return a single global schema error.
 
 ### FR-2: Tier 2 — Row-Level Data Validation (Accumulative)
@@ -36,7 +37,7 @@ Validation failures must be returned as structured data — not flat strings —
 |---|---|
 | AC-1 | A CSV with the correct header and valid data rows is accepted and imported as before. |
 | AC-2 | A CSV with a missing column in the header returns a schema error and no rows are processed. |
-| AC-3 | A CSV with an extra column in the header returns a schema error and no rows are processed. |
+| AC-3 | A CSV with extra trailing columns in the header is accepted; the extra columns are ignored and all data rows are imported normally. |
 | AC-4 | A CSV with columns in the wrong order returns a schema error and no rows are processed. |
 | AC-5 | A CSV with correct schema but one invalid row returns row-level errors; all other rows are also checked (errors from all rows are collected). |
 | AC-6 | A CSV with multiple invalid rows returns all errors — one entry per violation, each tagged with a row number. |
@@ -75,13 +76,16 @@ record RowValidationError(int rowNumber, String column, String message)
 - Pure domain class (no framework dependencies).
 - Declares `static final String[] EXPECTED_COLUMNS = {"bankName","accountNumber","accountType","balance","currency"}`.
 - Single method: `void validate(String[] actualHeader)`.
-- Compares `actualHeader` element-by-element against `EXPECTED_COLUMNS`.
-- Throws `CsvSchemaException` on first discrepancy with a message identifying the problem (e.g., "Expected column 'accountNumber' at position 2 but found 'acctNum'").
+- Throws `CsvSchemaException` immediately if `actualHeader.length < EXPECTED_COLUMNS.length` (too few columns).
+- Compares only the first `EXPECTED_COLUMNS.length` positions element-by-element against `EXPECTED_COLUMNS`; any columns beyond that index are **not inspected**.
+- Throws `CsvSchemaException` on the first required-position discrepancy with a message identifying the problem (e.g., "Expected column 'accountNumber' at position 2 but found 'acctNum'").
+- A header with more than five columns is valid provided the first five match exactly.
 
 **`domain/service/AccountCsvRowValidator`**
 - Pure domain class.
 - Single method: `List<RowValidationError> validate(List<String[]> rawRows)`.
 - Iterates all rows; for each row accumulates errors without short-circuiting.
+- Reads only the first `EXPECTED_COLUMNS.length` values per row; extra trailing values are ignored.
 - Rules applied per row:
   - Mandatory blank check for all 5 columns.
   - `accountType` enum membership check against `AccountType.values()`.
@@ -98,7 +102,7 @@ New two-pass flow:
 1. **Buffer** — read `InputStream` to `byte[]` once so it can be used twice.
 2. **Pass 1 (Schema)** — use `CSVReader` to read only the header row from the buffered bytes. Call `AccountCsvSchemaValidator.validate(header)`. Throws `CsvSchemaException` on failure; execution stops here.
 3. **Pass 2 (Row parsing)** — use `CSVReader` a second time on the same bytes to read all data rows as `String[]`. Call `AccountCsvRowValidator.validate(dataRows)`. If the returned list is non-empty, throw `CsvRowValidationException(errors)`.
-4. **Mapping** — only reached when both tiers pass. Map each `String[]` to `BankAccount` directly (positional mapping against the validated column order), removing the need for `CsvToBeanBuilder` in the happy path and eliminating the current fail-fast `toAccount()` method.
+4. **Mapping** — only reached when both tiers pass. Map each `String[]` to `BankAccount` directly using only the first `EXPECTED_COLUMNS.length` positional values; any trailing values are discarded. This removes the need for `CsvToBeanBuilder` in the happy path and eliminates the current fail-fast `toAccount()` method.
 
 > **Note:** `AccountCsvRecord` and the `@CsvBindByName` bean-mapping approach are superseded by this design. The record can be deprecated and eventually deleted.
 
@@ -145,7 +149,7 @@ Add two new conditional blocks:
 | S-2 | Column name typo (`acctNumber` instead of `accountNumber`) | `CsvSchemaException` — message names the bad column and position |
 | S-3 | Correct columns but wrong order (`accountNumber` first) | `CsvSchemaException` — message names the position mismatch |
 | S-4 | Missing one column (only 4 columns present) | `CsvSchemaException` |
-| S-5 | Extra column appended at the end | `CsvSchemaException` |
+| S-5 | Extra column appended at the end | No exception — schema passes; extra column is ignored |
 | S-6 | Empty header (zero columns) | `CsvSchemaException` |
 
 ### Unit — `AccountCsvRowValidatorTest`
@@ -164,7 +168,7 @@ Add two new conditional blocks:
 | P-1 | Valid CSV — 3 data rows | Returns 3 `BankAccount` objects (existing T4.1, now re-validated) |
 | P-2 | CSV with wrong column order | Throws `CsvSchemaException` (replaces T4.4 which expected generic `AccountImportException`) |
 | P-3 | CSV with missing column | Throws `CsvSchemaException` |
-| P-4 | CSV with extra column | Throws `CsvSchemaException` |
+| P-4 | CSV with extra trailing column | Returns `BankAccount` list (extra column silently ignored; no exception thrown) |
 | P-5 | Valid schema, invalid `accountType` on row 2 | Throws `CsvRowValidationException` with `rowErrors` containing row 2 entry |
 | P-6 | Valid schema, 3 rows each with one error | Throws `CsvRowValidationException` with 3 entries |
 | P-7 | Header-only file | Returns empty list (AC-1 baseline, no change) |
@@ -201,7 +205,7 @@ Add two new conditional blocks:
 | `VALID_CSV` | Yes | None | Happy path (already in `accounts.spec.ts`) |
 | `HEADER_ONLY_CSV` | Yes | No data rows | Already in `accounts.spec.ts` |
 | `MISSING_COLUMN_CSV` | No — missing `currency` | — | Schema error: missing column |
-| `EXTRA_COLUMN_CSV` | No — extra `notes` at end | — | Schema error: extra column |
+| `EXTRA_COLUMN_CSV` | Yes — extra `notes` at end (trailing) | None | Lenient parsing: extra trailing column is accepted and import succeeds |
 | `WRONG_ORDER_CSV` | No — `accountNumber` before `bankName` | — | Schema error: wrong order |
 | `TYPO_COLUMN_CSV` | No — `acctNumber` instead of `accountNumber` | — | Schema error: column name typo |
 | `BAD_ACCOUNT_TYPE_ROW1_CSV` | Yes | Row 1: `accountType=MORTGAGE` | Row error: invalid enum value |
@@ -219,11 +223,11 @@ Add two new conditional blocks:
 | ID | Scenario | CSV Fixture | Assertions |
 |---|---|---|---|
 | E2E-S1 | Missing column shows schema-error-banner | `MISSING_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; `[data-testid="row-errors-banner"]` absent; no redirect to `/accounts` |
-| E2E-S2 | Extra column shows schema-error-banner | `EXTRA_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; `[data-testid="row-errors-banner"]` absent |
+| E2E-S2 | Extra trailing column is accepted — import succeeds | `EXTRA_COLUMN_CSV` | No `schema-error-banner`; no `row-errors-banner`; accounts table count increases by the expected number of data rows |
 | E2E-S3 | Wrong column order shows schema-error-banner | `WRONG_ORDER_CSV` | `[data-testid="schema-error-banner"]` visible; error text names the mismatched position |
 | E2E-S4 | Column name typo shows schema-error-banner | `TYPO_COLUMN_CSV` | `[data-testid="schema-error-banner"]` visible; error text references the bad column name |
 | E2E-S5 | Schema error does not import any rows | `MISSING_COLUMN_CSV` | After upload: accounts table count unchanged from before upload (pre-seed 1 row, post upload still 1 row) |
-| E2E-S6 | Schema error never co-renders row-errors-banner | `EXTRA_COLUMN_CSV` | `[data-testid="row-errors-banner"]` has count 0 in DOM |
+| E2E-S6 | Schema error never co-renders row-errors-banner | `MISSING_COLUMN_CSV` | `[data-testid="row-errors-banner"]` has count 0 in DOM |
 
 ---
 
