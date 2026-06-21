@@ -128,11 +128,14 @@ None.
 
 | ID | Scenario | Fixture / State | Assertions |
 |---|---|---|---|
-| E2E-1 | Click `[data-testid="sort-bankName"]` | `SORT_FIXTURE_CSV` imported | First account row contains "Ally"; indicator shows ↑ |
-| E2E-2 | Click `[data-testid="sort-bankName"]` again | same | First account row contains "Chase"; indicator shows ↓ |
-| E2E-3 | Click `[data-testid="sort-balance"]` | same | First row balance cell = "100" |
-| E2E-4 | Click `[data-testid="sort-accountType"]` | same | First row type cell = "CHECKING" |
-| E2E-5 | Fresh page load, no sort params | same | `[data-testid="sort-balance"]` shows ↑ (default sort active); other headers show no indicator |
+| E2E-1 | Click `[data-testid="sort-bankName"]` | `SORT_FIXTURE_CSV` imported | First row bankName = "Ally"; `sort-bankName` shows ↑; `sort-balance` and `sort-accountType` show no indicator |
+| E2E-2 | Click `[data-testid="sort-bankName"]` again | same (bankName asc active) | First row bankName = "Chase"; `sort-bankName` shows ↓; `sort-balance` and `sort-accountType` show no indicator |
+| E2E-3 | Click `[data-testid="sort-balance"]` | same | First row balance cell = "100.00"; `sort-balance` shows ↑; `sort-bankName` shows no indicator |
+| E2E-4 | Click `[data-testid="sort-accountType"]` | same | First row accountType cell = "CHECKING"; `sort-accountType` shows ↑ |
+| E2E-5 | Fresh page load, no sort params | `SORT_FIXTURE_CSV` imported, navigate to `/accounts` | `sort-balance` shows ↑ (default); `sort-bankName` and `sort-accountType` show no indicator; first row balance = "100.00" |
+| E2E-6 | Navigate to `/accounts?sortField=invalid&sortDir=asc` | `SORT_FIXTURE_CSV` imported | Page renders without error; no `schema-error-banner` or `row-errors-banner`; `sort-balance` shows ↑ (default fallback active); first row balance = "100.00" |
+| E2E-7 | Click `sort-bankName` (asc), then click `sort-accountType` | `SORT_FIXTURE_CSV` imported | `sort-accountType` shows ↑ (starts at asc, not desc); `sort-bankName` shows no indicator; first row accountType = "CHECKING" |
+| E2E-8 | Click `sort-balance` once (asc), then click `sort-balance` again (desc) | `SORT_FIXTURE_CSV` imported | After second click: first row balance = "500.00"; `sort-balance` shows ↓ |
 
 ---
 
@@ -140,7 +143,9 @@ None.
 
 | Existing test | Change required |
 |---|---|
-| `accounts.spec.ts` — any assertion on plain-text `<th>` content for sortable columns | Retarget to `[data-testid="sort-bankName"]` etc. |
+| `accounts.spec.ts` line 175 — `expect(headers.nth(0)).toHaveText('Bank Name')` | Change to `toContainText('Bank Name')` — the `<th>` now wraps an `<a>` anchor, so exact text match breaks |
+| `accounts.spec.ts` line 177 — `expect(headers.nth(2)).toHaveText('Account Type')` | Change to `toContainText('Account Type')` — same reason |
+| `accounts.spec.ts` line 178 — `expect(headers.nth(3)).toHaveText('Balance')` | Change to `toContainText('Balance')` — same reason |
 
 ---
 
