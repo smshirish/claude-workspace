@@ -17,6 +17,19 @@
     <p th:text="${importError}"></p>
 </div>
 
+<div th:if="${schemaError}" data-testid="schema-error-banner">
+  <p th:text="${schemaError}"></p>
+</div>
+
+<div th:if="${rowErrors}" data-testid="row-errors-banner">
+  <ul>
+    <li th:each="err : ${rowErrors}"
+        th:text="|Row ${err.rowNumber}, '${err.column}': ${err.message}|"
+        th:attr="data-testid='row-error-' + ${err.rowNumber}">
+    </li>
+  </ul>
+</div>
+
 <form method="post" th:action="@{/accounts/import}" enctype="multipart/form-data" data-testid="accounts-import-form">
     <input type="file" name="file" accept=".csv" data-testid="accounts-file-input"/>
     <button type="submit" data-testid="accounts-import-button">Import CSV</button>

@@ -1,6 +1,8 @@
 package com.finance.app.infrastructure.adapter.in.web;
 
 import com.finance.app.domain.exception.AccountImportException;
+import com.finance.app.domain.exception.CsvRowValidationException;
+import com.finance.app.domain.exception.CsvSchemaException;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase.ImportAccountsCommand;
@@ -39,6 +41,14 @@ public class AccountController {
             importAccountsUseCase.importAccounts(
                     new ImportAccountsCommand(file.getInputStream(), file.getOriginalFilename()));
             return "redirect:/accounts";
+        } catch (CsvSchemaException e) {
+            model.addAttribute("schemaError", e.getSchemaError());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            return "accounts";
+        } catch (CsvRowValidationException e) {
+            model.addAttribute("rowErrors", e.getRowErrors());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            return "accounts";
         } catch (AccountImportException e) {
             model.addAttribute("importError", e.getMessage());
             model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
