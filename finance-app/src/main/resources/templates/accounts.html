@@ -11,17 +11,17 @@
 <header th:replace="~{fragments/nav :: nav('accounts')}"></header>
 
 <main class="app-main">
-<h1>Bank Accounts</h1>
+<h1 class="page-title">Bank Accounts</h1>
 
-<div th:if="${importError}" data-testid="accounts-import-error">
+<div th:if="${importError}" class="alert-banner alert-banner--error" data-testid="accounts-import-error">
     <p th:text="${importError}"></p>
 </div>
 
-<div th:if="${schemaError}" data-testid="schema-error-banner">
+<div th:if="${schemaError}" class="alert-banner alert-banner--error" data-testid="schema-error-banner">
   <p th:text="${schemaError}"></p>
 </div>
 
-<div th:if="${rowErrors}" data-testid="row-errors-banner">
+<div th:if="${rowErrors}" class="alert-banner alert-banner--error" data-testid="row-errors-banner">
   <ul>
     <li th:each="err : ${rowErrors}"
         th:text="|Row ${err.rowNumber}, '${err.column}': ${err.message}|"
@@ -30,16 +30,17 @@
   </ul>
 </div>
 
-<form method="post" th:action="@{/accounts/import}" enctype="multipart/form-data" data-testid="accounts-import-form">
+<form class="import-form" method="post" th:action="@{/accounts/import}" enctype="multipart/form-data" data-testid="accounts-import-form">
     <input type="file" name="file" accept=".csv" data-testid="accounts-file-input"/>
-    <button type="submit" data-testid="accounts-import-button">Import CSV</button>
+    <button type="submit" class="btn-import" data-testid="accounts-import-button">Import CSV</button>
 </form>
 
-<div th:if="${#lists.isEmpty(accounts)}" data-testid="accounts-empty-state">
+<div th:if="${#lists.isEmpty(accounts)}" class="empty-state" data-testid="accounts-empty-state">
     <p>No accounts imported yet. Upload a CSV file to get started.</p>
 </div>
 
-<table th:unless="${#lists.isEmpty(accounts)}" data-testid="accounts-table">
+<div th:unless="${#lists.isEmpty(accounts)}" class="accounts-table-wrapper">
+<table class="accounts-table" data-testid="accounts-table">
     <thead>
     <tr>
         <th>Bank Name</th>
@@ -54,11 +55,12 @@
         <td th:text="${account.bankName()}"></td>
         <td th:text="${account.accountNumber()}"></td>
         <td th:text="${account.accountType()}"></td>
-        <td th:text="${account.balance()}"></td>
+        <td class="balance-cell" th:text="${account.balance()}"></td>
         <td th:text="${account.currency()}"></td>
     </tr>
     </tbody>
 </table>
+</div>
 </main>
 
 </body>

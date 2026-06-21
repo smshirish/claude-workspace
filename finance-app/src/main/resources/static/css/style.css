@@ -175,3 +175,135 @@ body {
 .welcome-text {
     color: #4a5568;
 }
+
+/* ── Accounts page ──────────────────────── */
+
+.page-title {
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: #2b6cb0;
+    margin-bottom: 24px;
+}
+
+.import-form {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 24px;
+    padding: 16px 20px;
+    background: #ffffff;
+    border: 1px solid #e2e8f0;
+    border-radius: 8px;
+    box-shadow: 0 1px 4px rgba(0,0,0,0.05);
+}
+
+.import-form input[type="file"] {
+    font-size: 0.9rem;
+    color: #4a5568;
+}
+
+.btn-import {
+    padding: 8px 18px;
+    background: #2b6cb0;
+    color: #ffffff;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.btn-import:hover {
+    background: #2c5282;
+}
+
+.alert-banner {
+    padding: 12px 16px;
+    border-radius: 6px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+}
+
+.alert-banner--error {
+    background: #fff5f5;
+    border: 1px solid #fc8181;
+    color: #c53030;
+}
+
+.alert-banner ul {
+    padding-left: 18px;
+}
+
+.empty-state {
+    padding: 40px;
+    text-align: center;
+    color: #718096;
+    background: #ffffff;
+    border: 1px dashed #cbd5e0;
+    border-radius: 8px;
+}
+
+.accounts-table-wrapper {
+    background: #ffffff;
+    border-radius: 10px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.07);
+    overflow: hidden;
+}
+
+.accounts-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.9rem;
+}
+
+.accounts-table thead {
+    background: #2b6cb0;
+    color: #ffffff;
+}
+
+.accounts-table thead th {
+    padding: 12px 16px;
+    text-align: left;
+    font-weight: 600;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    font-size: 0.78rem;
+}
+
+.accounts-table tbody tr {
+    border-bottom: 1px solid #edf2f7;
+    transition: background 0.1s;
+}
+
+.accounts-table tbody tr:last-child {
+    border-bottom: none;
+}
+
+.accounts-table tbody tr:hover {
+    background: #ebf4ff;
+}
+
+.accounts-table tbody tr:nth-child(even) {
+    background: #f7fafc;
+}
+
+.accounts-table tbody tr:nth-child(even):hover {
+    background: #ebf4ff;
+}
+
+.accounts-table td {
+    padding: 12px 16px;
+    color: #4a5568;
+}
+
+.accounts-table td:first-child {
+    font-weight: 600;
+    color: #2d3748;
+}
+
+.balance-cell {
+    font-family: 'Courier New', monospace;
+    font-weight: 600;
+    color: #276749;
+}
