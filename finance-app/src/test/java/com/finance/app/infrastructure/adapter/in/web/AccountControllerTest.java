@@ -3,6 +3,7 @@ package com.finance.app.infrastructure.adapter.in.web;
 import com.finance.app.domain.exception.AccountImportException;
 import com.finance.app.domain.exception.CsvSchemaException;
 import com.finance.app.domain.exception.CsvRowValidationException;
+import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountType;
 import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.model.validation.RowValidationError;
@@ -58,7 +59,7 @@ class AccountControllerTest {
         var accounts = List.of(
                 BankAccount.create("ING", "NL91ABNA0417164300", AccountType.CHECKING, new BigDecimal("500.00"), "EUR")
         );
-        given(getAllAccountsUseCase.getAllAccounts()).willReturn(accounts);
+        given(getAllAccountsUseCase.getAllAccounts(any(AccountSortCriteria.class))).willReturn(accounts);
 
         mockMvc.perform(get("/accounts"))
                 .andExpect(status().isOk())
@@ -70,7 +71,7 @@ class AccountControllerTest {
     @Test
     @WithMockUser
     void getAccounts_whenNoAccountsStored_renders200WithoutError() throws Exception {
-        given(getAllAccountsUseCase.getAllAccounts()).willReturn(List.of());
+        given(getAllAccountsUseCase.getAllAccounts(any(AccountSortCriteria.class))).willReturn(List.of());
 
         mockMvc.perform(get("/accounts"))
                 .andExpect(status().isOk())

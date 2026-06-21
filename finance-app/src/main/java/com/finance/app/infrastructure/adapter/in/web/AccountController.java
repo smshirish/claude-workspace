@@ -3,6 +3,9 @@ package com.finance.app.infrastructure.adapter.in.web;
 import com.finance.app.domain.exception.AccountImportException;
 import com.finance.app.domain.exception.CsvRowValidationException;
 import com.finance.app.domain.exception.CsvSchemaException;
+import com.finance.app.domain.model.AccountSortCriteria;
+import com.finance.app.domain.model.AccountSortField;
+import com.finance.app.domain.model.SortDirection;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase.ImportAccountsCommand;
@@ -15,10 +18,17 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Map;
 
 @Controller
 @RequestMapping("/accounts")
 public class AccountController {
+
+    private static final Map<String, AccountSortField> SORT_FIELD_MAP = Map.of(
+            "bankName",    AccountSortField.BANK_NAME,
+            "balance",     AccountSortField.BALANCE,
+            "accountType", AccountSortField.ACCOUNT_TYPE
+    );
 
     private final ImportAccountsUseCase importAccountsUseCase;
     private final GetAllAccountsUseCase getAllAccountsUseCase;
@@ -30,8 +40,27 @@ public class AccountController {
     }
 
     @GetMapping
-    public String showAccounts(Model model) {
-        model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+    public String showAccounts(
+            @RequestParam(required = false) String sortField,
+            @RequestParam(required = false) String sortDir,
+            Model model) {
+        AccountSortField field = SORT_FIELD_MAP.get(sortField);
+        AccountSortCriteria criteria;
+        String activeField;
+        String activeDir;
+        if (field != null) {
+            SortDirection direction = "desc".equalsIgnoreCase(sortDir) ? SortDirection.DESC : SortDirection.ASC;
+            criteria = new AccountSortCriteria(field, direction);
+            activeField = sortField;
+            activeDir = direction == SortDirection.DESC ? "desc" : "asc";
+        } else {
+            criteria = AccountSortCriteria.DEFAULT;
+            activeField = "balance";
+            activeDir = "asc";
+        }
+        model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(criteria));
+        model.addAttribute("activeSortField", activeField);
+        model.addAttribute("activeSortDir", activeDir);
         return "accounts";
     }
 
@@ -43,19 +72,19 @@ public class AccountController {
             return "redirect:/accounts";
         } catch (CsvSchemaException e) {
             model.addAttribute("schemaError", e.getSchemaError());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
             return "accounts";
         } catch (CsvRowValidationException e) {
             model.addAttribute("rowErrors", e.getRowErrors());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
             return "accounts";
         } catch (AccountImportException e) {
             model.addAttribute("importError", e.getMessage());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
             return "accounts";
         } catch (IOException e) {
             model.addAttribute("importError", "Could not read uploaded file.");
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts());
+            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
             return "accounts";
         }
     }

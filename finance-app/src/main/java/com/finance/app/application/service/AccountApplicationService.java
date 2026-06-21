@@ -1,12 +1,15 @@
 package com.finance.app.application.service;
 
 import com.finance.app.domain.exception.AccountImportException;
+import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.BankAccount;
+import com.finance.app.domain.model.SortDirection;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.out.AccountFileParser;
 import com.finance.app.domain.port.out.AccountRepository;
 
+import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
@@ -32,7 +35,16 @@ public class AccountApplicationService implements ImportAccountsUseCase, GetAllA
     }
 
     @Override
-    public List<BankAccount> getAllAccounts() {
-        return repository.findAll();
+    public List<BankAccount> getAllAccounts(AccountSortCriteria criteria) {
+        List<BankAccount> accounts = repository.findAll();
+        Comparator<BankAccount> comparator = switch (criteria.field()) {
+            case BANK_NAME    -> Comparator.comparing(BankAccount::bankName);
+            case BALANCE      -> Comparator.comparing(BankAccount::balance);
+            case ACCOUNT_TYPE -> Comparator.comparing(a -> a.accountType().name());
+        };
+        if (criteria.direction() == SortDirection.DESC) {
+            comparator = comparator.reversed();
+        }
+        return accounts.stream().sorted(comparator).toList();
     }
 }
