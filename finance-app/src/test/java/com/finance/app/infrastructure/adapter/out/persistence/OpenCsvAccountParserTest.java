@@ -1,6 +1,8 @@
 package com.finance.app.infrastructure.adapter.out.persistence;
 
 import com.finance.app.domain.exception.AccountImportException;
+import com.finance.app.domain.exception.CsvSchemaException;
+import com.finance.app.domain.exception.CsvRowValidationException;
 import com.finance.app.domain.model.AccountType;
 import org.junit.jupiter.api.Test;
 
@@ -80,6 +82,93 @@ class OpenCsvAccountParserTest {
         var result = sut.parse(toStream(csv), "test.csv");
 
         assertThat(result.get(0).balance()).isEqualByComparingTo(new BigDecimal("12345.67"));
+    }
+
+    // P-2: wrong column order → throws CsvSchemaException
+    @Test
+    void parse_wrongColumnOrder_throwsCsvSchemaException() {
+        var csv = """
+                accountNumber,bankName,accountType,balance,currency
+                NL91ABNA0417164300,ING,CHECKING,1500.00,EUR
+                """;
+
+        assertThatThrownBy(() -> sut.parse(toStream(csv), "test.csv"))
+                .isInstanceOf(CsvSchemaException.class);
+    }
+
+    // P-3: missing column → throws CsvSchemaException
+    @Test
+    void parse_missingColumn_throwsCsvSchemaException() {
+        var csv = """
+                bankName,accountNumber,accountType,balance
+                ING,NL91ABNA0417164300,CHECKING,1500.00
+                """;
+
+        assertThatThrownBy(() -> sut.parse(toStream(csv), "test.csv"))
+                .isInstanceOf(CsvSchemaException.class);
+    }
+
+    // P-4: extra trailing column → returns BankAccount list (no exception thrown)
+    @Test
+    void parse_extraTrailingColumn_returnsBankAccountList() {
+        var csv = """
+                bankName,accountNumber,accountType,balance,currency,notes
+                ING,NL91ABNA0417164300,CHECKING,1500.00,EUR,some-note
+                Rabobank,NL20INGB0001234567,SAVINGS,250.75,EUR,another-note
+                """;
+
+        var result = sut.parse(toStream(csv), "test.csv");
+
+        assertThat(result).hasSize(2);
+        assertThat(result.get(0).bankName()).isEqualTo("ING");
+        assertThat(result.get(1).bankName()).isEqualTo("Rabobank");
+    }
+
+    // P-5: valid schema, invalid accountType on row 2 → throws CsvRowValidationException with row 2 entry
+    @Test
+    void parse_validSchemaInvalidAccountTypeOnRow2_throwsCsvRowValidationExceptionWithRow2Entry() {
+        var csv = """
+                bankName,accountNumber,accountType,balance,currency
+                ING,NL91ABNA0417164300,CHECKING,1500.00,EUR
+                Rabobank,NL20INGB0001234567,MORTGAGE,250.75,EUR
+                """;
+
+        assertThatThrownBy(() -> sut.parse(toStream(csv), "test.csv"))
+                .isInstanceOf(CsvRowValidationException.class)
+                .satisfies(ex -> {
+                    var rowErrors = ((CsvRowValidationException) ex).getRowErrors();
+                    assertThat(rowErrors).hasSize(1);
+                    assertThat(rowErrors.get(0).rowNumber()).isEqualTo(2);
+                    assertThat(rowErrors.get(0).column()).isEqualTo("accountType");
+                });
+    }
+
+    // P-6: valid schema, 3 rows each with one error → throws CsvRowValidationException with 3 entries
+    @Test
+    void parse_validSchemaThreeRowsEachWithOneError_throwsCsvRowValidationExceptionWith3Entries() {
+        var csv = """
+                bankName,accountNumber,accountType,balance,currency
+                ING,NL91ABNA0417164300,CHECKING,not-a-number,EUR
+                ,NL20INGB0001234567,SAVINGS,250.75,EUR
+                ABN AMRO,NL02ABNA0123456789,MORTGAGE,9999.99,USD
+                """;
+
+        assertThatThrownBy(() -> sut.parse(toStream(csv), "test.csv"))
+                .isInstanceOf(CsvRowValidationException.class)
+                .satisfies(ex -> {
+                    var rowErrors = ((CsvRowValidationException) ex).getRowErrors();
+                    assertThat(rowErrors).hasSize(3);
+                });
+    }
+
+    // P-7: header-only file → returns empty list
+    @Test
+    void parse_headerOnlyFile_returnsEmptyList() {
+        var csv = "bankName,accountNumber,accountType,balance,currency\n";
+
+        var result = sut.parse(toStream(csv), "test.csv");
+
+        assertThat(result).isEmpty();
     }
 
     private ByteArrayInputStream toStream(String content) {
