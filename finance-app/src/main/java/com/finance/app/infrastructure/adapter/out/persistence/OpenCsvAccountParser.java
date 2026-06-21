@@ -32,6 +32,13 @@ public class OpenCsvAccountParser implements AccountFileParser {
         } catch (Exception e) {
             throw new AccountImportException("Failed to read file: " + fileName, e);
         }
+        // Strip UTF-8 BOM (0xEF 0xBB 0xBF) produced by Excel and some editors
+        if (bytes.length >= 3
+                && (bytes[0] & 0xFF) == 0xEF
+                && (bytes[1] & 0xFF) == 0xBB
+                && (bytes[2] & 0xFF) == 0xBF) {
+            bytes = java.util.Arrays.copyOfRange(bytes, 3, bytes.length);
+        }
 
         // Pass 1: schema validation on header row only
         try (CSVReader reader = new CSVReader(new InputStreamReader(
