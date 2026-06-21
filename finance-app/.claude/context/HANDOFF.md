@@ -1,18 +1,26 @@
 # Handoff: Import Accounts — CSV Row-Level Validation
 
 ## Status
-In progress — E2E tests written; all unit tests written; backend implementation pending.
+Backend complete — all unit tests green; E2E tests written; E2E run pending (requires live app).
 
 ### Completed
+- `domain/exception/CsvSchemaException` — holds single `schemaError` string.
+- `domain/exception/CsvRowValidationException` — holds `List<RowValidationError>`.
+- `domain/model/validation/RowValidationError` — record `(int rowNumber, String column, String message)`.
+- `domain/service/AccountCsvSchemaValidator` — validates header; throws `CsvSchemaException` on any mismatch; tolerates extra trailing columns.
+- `domain/service/AccountCsvRowValidator` — accumulates all row errors; validates mandatory fields, `accountType` enum, and `balance` parseability.
+- `infrastructure/adapter/out/persistence/OpenCsvAccountParser` — refactored to two-pass flow (schema check → row validation → mapping).
+- `infrastructure/adapter/in/web/AccountController` — three explicit catch blocks for `CsvSchemaException`, `CsvRowValidationException`, `AccountImportException`.
+- `src/main/resources/templates/accounts.html` — `schema-error-banner` and `row-errors-banner` blocks added.
+- `pom.xml` — Surefire plugin configured to exclude E2E tests from `mvn test`.
 - `e2e/tests/csv-validation.spec.ts` — 13 tests: F3 schema validation (E2E-S1–S6) + F4 row-level validation (E2E-R1–R7).
 - `e2e/tests/accounts.spec.ts` — AC1.6 selector updated from `accounts-import-error` to `row-errors-banner`.
-- `domain/service/AccountCsvSchemaValidatorTest` — S-1 through S-6 (all 6 scenarios covered).
-- `domain/service/AccountCsvRowValidatorTest` — R-1 through R-6 (all 6 scenarios covered).
-- `infrastructure/adapter/out/persistence/OpenCsvAccountParserTest` — P-1 through P-7 (all 7 integration scenarios covered, plus legacy T4.x tests retained).
-- `infrastructure/adapter/in/web/AccountControllerTest` — C-1 through C-3 (all 3 MockMvc scenarios covered, plus existing T6.x tests retained).
+- All unit tests: `AccountCsvSchemaValidatorTest` (S-1–S-6), `AccountCsvRowValidatorTest` (R-1–R-6), `OpenCsvAccountParserTest` (P-1–P-7), `AccountControllerTest` (C-1–C-3) — all green.
 
 ### Next
-- Implement backend: `CsvSchemaException`, `CsvRowValidationException`, `RowValidationError`, `AccountCsvSchemaValidator`, `AccountCsvRowValidator`, refactor `OpenCsvAccountParser` (two-pass flow), update `AccountController` catch blocks, update `accounts.html` template.
+- Run E2E suite: start app (`mvn spring-boot:run`), then `cd e2e && npx playwright test csv-validation.spec.ts`.
+- Fix any E2E failures (selector mismatches, error message wording, fixture edge cases).
+- Verify AC1.6 regression in `accounts.spec.ts` passes with updated selector.
 
 ---
 
