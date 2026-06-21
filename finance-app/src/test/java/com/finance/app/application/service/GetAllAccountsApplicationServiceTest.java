@@ -1,5 +1,6 @@
 package com.finance.app.application.service;
 
+import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountType;
 import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.port.out.AccountFileParser;
@@ -38,7 +39,7 @@ class GetAllAccountsApplicationServiceTest {
         );
         given(repository.findAll()).willReturn(accounts);
 
-        var result = sut.getAllAccounts();
+        var result = sut.getAllAccounts(AccountSortCriteria.DEFAULT);
 
         assertThat(result).isEqualTo(accounts);
     }
@@ -48,9 +49,9 @@ class GetAllAccountsApplicationServiceTest {
     void getAllAccounts_whenRepositoryEmpty_returnsEmptyListWithoutException() {
         given(repository.findAll()).willReturn(List.of());
 
-        assertThatCode(() -> sut.getAllAccounts())
+        assertThatCode(() -> sut.getAllAccounts(AccountSortCriteria.DEFAULT))
                 .doesNotThrowAnyException();
 
-        assertThat(sut.getAllAccounts()).isEmpty();
+        assertThat(sut.getAllAccounts(AccountSortCriteria.DEFAULT)).isEmpty();
     }
 }
