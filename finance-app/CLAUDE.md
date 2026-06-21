@@ -31,5 +31,6 @@
 - Run backend first: `mvn spring-boot:run` then `cd e2e && npx playwright test`
 
 ## Context Files
-- Feature plan: @.claude/context/PLAN.md
+- Feature plan: @.claude/context/PLAN.md — active plan for the current iteration; overwritten per feature.
+- Plan template: @.claude/context/PLAN_template.md — read this before generating a new PLAN.md; never modify.
 - Handoff status: @.claude/context/HANDOFF.md
