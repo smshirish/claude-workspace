@@ -10,9 +10,10 @@ three features below. Do NOT write any code.
 ## Features to plan
 
 **Feature A — Column Sorting**
-User can sort the account table by: Bank Name, Account Balance, Account Type.
-This is a static multi-column sort (not interactive click-to-sort): 
-sort order is Bank Name → Type → Balance.
+User can click a column header to sort the account table by: Bank Name, Account Balance, Account Type.
+Clicking a header triggers a GET request to the backend with sort field and direction (asc/desc) as query parameters.
+The backend applies the sort before returning the account list; Thymeleaf renders the sorted result.
+Clicking the same column header again toggles the sort direction. No client-side sorting.
 
 **Feature B — Filter Bar**
 User can filter accounts using partial, case-insensitive match on:
