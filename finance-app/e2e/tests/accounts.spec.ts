@@ -125,11 +125,11 @@ test.describe('F1 — Import Accounts', () => {
     await expect(errorDiv).toBeVisible({ timeout: 8_000 });
   });
 
-  // AC1.6: CSV with unrecognised accountType shows error message
-  test('AC1.6: CSV with unrecognised accountType shows importError', async ({ page }) => {
+  // AC1.6: CSV with unrecognised accountType shows row-level validation error
+  test('AC1.6: CSV with unrecognised accountType shows row-errors-banner', async ({ page }) => {
     await importCsv(page, BAD_ACCOUNT_TYPE_CSV);
 
-    const errorDiv = page.locator('[data-testid="accounts-import-error"]');
+    const errorDiv = page.locator('[data-testid="row-errors-banner"]');
     await expect(errorDiv).toBeVisible({ timeout: 8_000 });
   });
 

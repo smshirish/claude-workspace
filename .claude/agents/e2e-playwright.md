@@ -1,9 +1,10 @@
 ---
 name: e2e-playwright
-description: Use this agent when you need to write Playwright end-to-end tests 
-for any web application. Uses Node.js Playwright (@playwright/test),
-NOT the Java port (com.microsoft.playwright). Reads acceptance criteria from 
-PLAN.md and translates them into browser-based user journey tests.
+description: >
+  Use this agent when you need to write Playwright end-to-end tests
+  for any web application. Uses Node.js Playwright (@playwright/test),
+  NOT the Java port (com.microsoft.playwright). Reads acceptance criteria from
+  PLAN.md and translates them into browser-based user journey tests.
 tools: Read, Write, Edit, Bash, Glob, Grep
 model: sonnet
 ---
