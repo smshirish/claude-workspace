@@ -1,0 +1,19 @@
+{
+  "env": {
+    "CLAUDE_CODE_DISABLE_1M_CONTEXT": "1",
+    "CLAUDE_AUTOCOMPACT_PCT_OVERRIDE": "70"
+  },
+  "permissions": {
+    "allow": [
+      "Bash(claude agents *)",
+      "Bash(curl *)",
+      "Bash(npx playwright *)",
+      "Bash(mvn -f /workspaces/claude-workspace/finance-app/pom.xml test)",
+      "Bash(mvn test *)",
+      "Bash(java -version)",
+      "Bash(mvn help:evaluate -Dexpression=java.version -q -DforceStdout)",
+      "Bash(dpkg -l)",
+      "Bash(apt-cache show *)"
+    ]
+  }
+}

@@ -17,6 +17,7 @@
   },
   // Ensure the container runs as the 'node' user provided by the base image [4]
   "remoteUser": "node",
+  "forwardPorts": [8080],
    "runArgs": [
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW"
@@ -27,6 +28,8 @@
     // sudo apt install maven
     //sudo apt-get install -y openjdk-21-jdk-headless
     //set java home in bashrc export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc
+    "bash",
+    "-c",
+    "sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless maven && echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc"
 	]
-
 }
