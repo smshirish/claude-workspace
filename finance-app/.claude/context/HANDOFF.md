@@ -1,10 +1,15 @@
 # Handoff
 
 ## Status
-Plans complete. Implementation pending. E2E tests to be written and validated once backend is implemented.
+Unit + MockMvc failing tests written for Feature A (Column Sorting). Implementation pending.
 
 ### Completed
-_Nothing in progress._
+- **Feature A — Failing tests written** (Test Agent, 2026-06-21)
+  - `AccountApplicationServiceSortTest` — 5 unit tests (S-1 to S-5)
+  - `AccountControllerSortTest` — 4 MockMvc tests (C-1 to C-4)
+  - Stub domain classes in test scope (see "Implementation Agent Notes" below)
+
+### Next — Account Listing Enhancements (3 features, in order)
 
 ### Next — Account Listing Enhancements (3 features, in order)
 
@@ -13,6 +18,39 @@ _Nothing in progress._
 | 1 | Column Sorting | `.claude/context/PLAN_A_ColumnSorting.md` | `e2e/tests/account-sort.spec.ts` |
 | 2 | Filter Bar | `.claude/context/PLAN_B_FilterBar.md` | `e2e/tests/account-filter.spec.ts` |
 | 3 | Filtered Total | `.claude/context/PLAN_C_FilteredTotal.md` | `e2e/tests/account-total.spec.ts` |
+
+---
+
+## Implementation Agent Notes — Feature A (Column Sorting)
+
+### Test classes written (currently fail to compile — that's expected)
+
+| Class | Location | Covers |
+|---|---|---|
+| `AccountApplicationServiceSortTest` | `src/test/java/.../application/service/` | S-1: bankName ASC; S-2: bankName DESC; S-3: balance ASC; S-4: accountType ASC; S-5: DEFAULT criteria |
+| `AccountControllerSortTest` | `src/test/java/.../adapter/in/web/` | C-1: sortField=bankName&sortDir=asc model attrs; C-2: sortDir=desc model attr; C-3: no params → default; C-4: unknown sortField → default fallback |
+
+### Stub classes to delete after production code is added
+
+These three files exist only to satisfy compilation of the test classes. Delete them once the real versions are created in `src/main/java`:
+
+- `src/test/java/com/finance/app/domain/model/AccountSortField.java`
+- `src/test/java/com/finance/app/domain/model/SortDirection.java`
+- `src/test/java/com/finance/app/domain/model/AccountSortCriteria.java`
+
+### What the implementation agent must add (src/main/java only)
+
+1. `domain/model/AccountSortField.java` — enum: `BANK_NAME`, `BALANCE`, `ACCOUNT_TYPE`
+2. `domain/model/SortDirection.java` — enum: `ASC`, `DESC`
+3. `domain/model/AccountSortCriteria.java` — record with `DEFAULT = new AccountSortCriteria(BALANCE, ASC)`
+4. `domain/port/in/GetAllAccountsUseCase.java` — change `getAllAccounts()` → `getAllAccounts(AccountSortCriteria)`
+5. `application/service/AccountApplicationService.java` — implement `getAllAccounts(AccountSortCriteria)` with Comparator logic
+6. `infrastructure/adapter/in/web/AccountController.java` — accept `@RequestParam sortField/sortDir`, parse to criteria, pass to use case, add `activeSortField`/`activeSortDir` to model; update all `getAllAccounts()` calls in catch blocks to pass `AccountSortCriteria.DEFAULT`
+7. `resources/templates/accounts.html` — column header `<a th:href>` links with toggle logic and indicator spans; `data-testid` on each sort link
+
+### Existing test impact
+
+`AccountControllerTest` (existing) — uses `given(getAllAccountsUseCase.getAllAccounts()).willReturn(...)` with the no-arg signature. Once `GetAllAccountsUseCase` is updated, this test must be updated to stub `getAllAccounts(AccountSortCriteria.DEFAULT)` instead.
 
 ---
 
