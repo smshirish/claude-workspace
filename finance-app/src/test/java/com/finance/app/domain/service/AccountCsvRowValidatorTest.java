@@ -63,7 +63,7 @@ class AccountCsvRowValidatorTest {
     // R-4: row 1 non-numeric balance → RowValidationError(column="balance")
     @Test
     void validate_row1NonNumericBalance_returnsErrorForBalance() {
-        List<String[]> rows = List.of(
+        List<String[]> rows = List.<String[]>of(
                 new String[]{"ING", "NL91ABNA0417164300", "CHECKING", "not-a-number", "EUR"}
         );
 
@@ -95,7 +95,7 @@ class AccountCsvRowValidatorTest {
     // R-6: blank accountNumber → RowValidationError(column="accountNumber")
     @Test
     void validate_blankAccountNumber_returnsErrorForAccountNumber() {
-        List<String[]> rows = List.of(
+        List<String[]> rows = List.<String[]>of(
                 new String[]{"ING", "  ", "CHECKING", "1500.00", "EUR"}
         );
 
