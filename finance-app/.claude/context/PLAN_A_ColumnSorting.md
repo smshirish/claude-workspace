@@ -19,8 +19,8 @@ If the clicked header matches the active `sortField`, its link href reverses `so
 ### FR-4: Sort indicator in active header
 The active sort column shows ↑ (asc) or ↓ (desc). Inactive columns show no indicator.
 
-### FR-5: Default (no params) returns unsorted list
-`GET /accounts` with no sort params returns the list in repository order — unchanged from current behaviour.
+### FR-5: Default sort by Amount
+`GET /accounts` with no sort params returns the list sorted by balance ascending. This is the default sort applied whenever no valid `sortField`/`sortDir` params are present.
 
 ---
 
@@ -32,8 +32,8 @@ The active sort column shows ↑ (asc) or ↓ (desc). Inactive columns show no i
 | AC-2 | `GET /accounts?sortField=bankName&sortDir=desc` returns accounts ordered by `bankName` Z→A |
 | AC-3 | `GET /accounts?sortField=balance&sortDir=asc` returns accounts ordered by `balance` low→high |
 | AC-4 | `GET /accounts?sortField=accountType&sortDir=asc` returns accounts ordered by `accountType` A→Z |
-| AC-5 | `GET /accounts` (no sort params) returns accounts in repository order |
-| AC-6 | Unknown `sortField` value is silently ignored; list returned unsorted, no error |
+| AC-5 | `GET /accounts` (no sort params) returns accounts sorted by balance ascending (default sort) |
+| AC-6 | Unknown `sortField` value is silently ignored; falls back to default sort (balance ASC), no error |
 | AC-7 | Clicking the active sort column header reverses the direction in the rendered href |
 | AC-8 | Active header shows ↑ or ↓ indicator; inactive headers show none |
 
@@ -50,15 +50,16 @@ None.
 - `AccountSortCriteria` record (`AccountSortField field`, `SortDirection direction`) — `domain/model/`
 
 ### 3.3 New / Modified Domain Services
-**New port — `GetSortedAccountsUseCase`** in `domain/port/in/`:
-```
-List<BankAccount> getSortedAccounts(AccountSortCriteria criteria);
-```
-**Modified — `AccountApplicationService`** implements the new port:
+**Modified — `GetAllAccountsUseCase`** (existing port in `domain/port/in/`):
+- Change method signature from `getAllAccounts()` to `getAllAccounts(AccountSortCriteria criteria)`
+- `AccountSortCriteria` exposes a `DEFAULT` constant: `new AccountSortCriteria(BALANCE, ASC)`
+
+**Modified — `AccountApplicationService`** implements the updated port:
 - Fetch full list from repository
 - Build a `Comparator<BankAccount>` from `criteria.field()` switched to the matching getter
 - Reverse comparator when `criteria.direction() == DESC`
 - Return sorted copy (repository untouched)
+- All existing callers updated to pass `AccountSortCriteria.DEFAULT` when no user criteria available
 
 ### 3.4 Modified Infrastructure Adapters (Out-bound / Persistence)
 None.
@@ -66,9 +67,10 @@ None.
 ### 3.5 Modified Web Adapters (In-bound / Controllers)
 **Modified — `AccountController.showAccounts()`**:
 - Accept `@RequestParam(required=false) String sortField` and `String sortDir`
-- Parse to `AccountSortField` / `SortDirection` via enum lookup; on `IllegalArgumentException` treat as no-sort
-- Call `getSortedAccountsUseCase` when both params are valid; fall back to `getAllAccountsUseCase` otherwise
+- Parse to `AccountSortField` / `SortDirection` via enum lookup; on `IllegalArgumentException` or missing params use `AccountSortCriteria.DEFAULT`
+- Always call `getAllAccountsUseCase.getAllAccounts(criteria)` — single call path, no fallback branching
 - Add `activeSortField` and `activeSortDir` to model for template toggle logic
+- **Also update `importAccounts()` catch blocks** — each call to `getAllAccountsUseCase.getAllAccounts()` must pass `AccountSortCriteria.DEFAULT`
 
 ### 3.6 Template / UI Changes
 **Modified — `accounts.html`**:
@@ -88,15 +90,15 @@ None.
 | S-2 | `getSortedAccounts(BANK_NAME, DESC)` same data | returns [Chase, BOFA, Ally] |
 | S-3 | `getSortedAccounts(BALANCE, ASC)` with balances [500, 100, 300] | returns order [100, 300, 500] |
 | S-4 | `getSortedAccounts(ACCOUNT_TYPE, ASC)` with [SAVINGS, CHECKING, SAVINGS] | CHECKING first |
-| S-5 | `getAllAccounts()` (existing method, no sort) | returns list in insertion order unchanged |
+| S-5 | `getAllAccounts(AccountSortCriteria.DEFAULT)` with balances [500, 100, 300] | returns [100, 300, 500] (balance ASC) |
 
 ### MockMvc — `AccountControllerSortTest`
 | # | Scenario | Expected model attributes |
 |---|---|---|
 | C-1 | `GET /accounts?sortField=bankName&sortDir=asc` | `accounts` sorted A→Z; `activeSortField=bankName`; `activeSortDir=asc` |
 | C-2 | `GET /accounts?sortField=balance&sortDir=desc` | `accounts` sorted by balance desc; `activeSortDir=desc` |
-| C-3 | `GET /accounts` (no params) | `accounts` present; `activeSortField` null/absent |
-| C-4 | `GET /accounts?sortField=unknown&sortDir=asc` | `accounts` unsorted; no error thrown; view renders normally |
+| C-3 | `GET /accounts` (no params) | `accounts` sorted by balance ASC; `activeSortField=balance`; `activeSortDir=asc` |
+| C-4 | `GET /accounts?sortField=unknown&sortDir=asc` | falls back to default (balance ASC); no error thrown; view renders normally |
 
 ---
 
@@ -130,7 +132,7 @@ None.
 | E2E-2 | Click `[data-testid="sort-bankName"]` again | same | First account row contains "Chase"; indicator shows ↓ |
 | E2E-3 | Click `[data-testid="sort-balance"]` | same | First row balance cell = "100" |
 | E2E-4 | Click `[data-testid="sort-accountType"]` | same | First row type cell = "CHECKING" |
-| E2E-5 | Fresh page load, no sort | same | No ↑ or ↓ indicator visible on any header |
+| E2E-5 | Fresh page load, no sort params | same | `[data-testid="sort-balance"]` shows ↑ (default sort active); other headers show no indicator |
 
 ---
 
