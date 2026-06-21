@@ -1,6 +1,6 @@
 {
   "name": "Claude Code Development",
-  "image": "mcr.microsoft.com/devcontainers/javascript-node:20", 
+  "image": "localhost/my-custom-devcontainer", 
   "features": {
     // Recommended to explicitly include Node.js to ensure compatibility [2]
     "ghcr.io/devcontainers/features/node:1": {},
