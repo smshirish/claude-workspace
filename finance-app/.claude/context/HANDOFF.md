@@ -1,7 +1,7 @@
 # Handoff
 
 ## Status
-Feature A (Column Sorting) — implementation complete; 8/9 tests pass. One MockMvc test failing (C-3, NullPointerException on `pk` null). Stub classes deleted. E2E pending.
+Feature A (Column Sorting) — implementation complete; 9/9 tests pass. All stub classes deleted. E2E pending.
 
 ### Completed
 - **Feature A — Implementation done** (2026-06-22)
@@ -33,7 +33,7 @@ Feature A (Column Sorting) — implementation complete; 8/9 tests pass. One Mock
 | Class | Location | Covers | Status |
 |---|---|---|---|
 | `AccountApplicationServiceSortTest` | `src/test/java/.../application/service/` | S-1: bankName ASC; S-2: bankName DESC; S-3: balance ASC; S-4: accountType ASC; S-5: DEFAULT criteria | All pass |
-| `AccountControllerSortTest` | `src/test/java/.../adapter/in/web/` | C-1: sortField=bankName&sortDir=asc; C-2: sortDir=desc; C-3: no params → default; C-4: unknown sortField → default fallback | C-3 failing (NullPointerException: `pk` is null at line 99) |
+| `AccountControllerSortTest` | `src/test/java/.../adapter/in/web/` | C-1: sortField=bankName&sortDir=asc; C-2: sortDir=desc; C-3: no params → default; C-4: unknown sortField → default fallback | All pass |
 
 ### Stub classes — DELETED
 
@@ -41,9 +41,8 @@ All three stubs have been removed; production versions are in `src/main/java/com
 
 ### Remaining work for next agent
 
-1. Fix `AccountControllerSortTest` C-3 — `NullPointerException: pk is null` at line 99. Likely the mock setup for the no-params default path is missing a `pk` value on the `Account` returned by the stub.
-2. Verify `accounts.html` sort links render correctly (template changes from step 7 of original plan).
-3. Run E2E tests (`e2e/tests/account-sort.spec.ts`) once backend is running.
+1. Verify `accounts.html` sort links render correctly (template changes from step 7 of original plan).
+2. Run E2E tests (`e2e/tests/account-sort.spec.ts`) once backend is running.
 
 ---
 

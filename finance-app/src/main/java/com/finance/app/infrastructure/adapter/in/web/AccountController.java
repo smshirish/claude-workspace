@@ -44,7 +44,7 @@ public class AccountController {
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDir,
             Model model) {
-        AccountSortField field = SORT_FIELD_MAP.get(sortField);
+        AccountSortField field = sortField != null ? SORT_FIELD_MAP.get(sortField) : null;
         AccountSortCriteria criteria;
         String activeField;
         String activeDir;
