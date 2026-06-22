@@ -1,7 +1,7 @@
 # Handoff
 
 ## Status
-Feature A (Column Sorting) — implementation complete; 9/9 tests pass. All stub classes deleted. E2E pending.
+Feature A (Column Sorting) — implementation complete; 9/9 unit/MockMvc tests pass. Template implemented. E2E tests FAILING (backend template resolution issue — `target/classes/templates/` was missing; fixed via `mvn process-resources`, but E2E run not yet verified clean).
 
 ### Completed
 - **Feature A — Implementation done** (2026-06-22)
@@ -41,26 +41,22 @@ All three stubs have been removed; production versions are in `src/main/java/com
 
 ### Remaining work for next agent
 
-#### Frontend template (accounts.html) — planned, not yet implemented
+#### Frontend template (accounts.html) — IMPLEMENTED (2026-06-22)
 
-Replace the three sortable `<th>` cells in `src/main/resources/templates/accounts.html`.
-Each sortable column (bankName, balance, accountType) needs:
-- `<a data-testid="sort-{field}">` link whose `href` toggles direction when the column is already active, else defaults to `asc`
-- A `<span th:if="${activeSortField == '{field}'}">` inside the `<a>` rendering `↑`/`↓` so E2E `toContainText` assertions work
-- Non-sortable columns (Account Number, Currency) stay as plain `<th>` text
+`src/main/resources/templates/accounts.html` updated:
+- Bank Name, Account Type, Balance `<th>` cells replaced with `<a data-testid="sort-{field}">` links
+- `href` toggles direction when column is active; defaults to `asc` when switching columns
+- `<span th:if="...">` inside each link renders `↑`/`↓` for the active sort column only
 
-See full Thymeleaf expressions in the plan below this section.
+#### Regression fix — accounts.spec.ts AC2.2 — DONE (2026-06-22)
 
-#### Regression conflict — accounts.spec.ts AC2.2 (DECISION NEEDED)
+`e2e/tests/accounts.spec.ts` lines 175, 177, 178 changed from `toHaveText` to `toContainText` per PLAN_A §5.4.
 
-`accounts.spec.ts` line 178: `expect(headers.nth(3)).toHaveText('Balance')` will FAIL after the template change.
-Reason: default sort is balance ASC, so the balance `<th>` innerText becomes "Balance ↑"; `toHaveText` does a full match.
-PLAN_A §5.4 explicitly requires changing lines 175, 177, 178 from `toHaveText` to `toContainText`.
-This update to `accounts.spec.ts` is **required** before implementing the template change.
+#### E2E status — FAILING
 
-#### E2E run
+E2E tests have NOT been verified green. Known issue: `target/classes/templates/` was empty at runtime causing Thymeleaf `TemplateInputException` on the homepage. Fixed by running `mvn process-resources`. Backend must be restarted before re-running E2E.
 
-After both changes above: start backend (`mvn spring-boot:run`) and run `cd e2e && npx playwright test e2e/tests/account-sort.spec.ts`.
+Next: restart backend (`mvn spring-boot:run`) and run `cd e2e && npx playwright test e2e/tests/account-sort.spec.ts`.
 
 ---
 
