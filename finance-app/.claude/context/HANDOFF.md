@@ -41,8 +41,26 @@ All three stubs have been removed; production versions are in `src/main/java/com
 
 ### Remaining work for next agent
 
-1. Verify `accounts.html` sort links render correctly (template changes from step 7 of original plan).
-2. Run E2E tests (`e2e/tests/account-sort.spec.ts`) once backend is running.
+#### Frontend template (accounts.html) — planned, not yet implemented
+
+Replace the three sortable `<th>` cells in `src/main/resources/templates/accounts.html`.
+Each sortable column (bankName, balance, accountType) needs:
+- `<a data-testid="sort-{field}">` link whose `href` toggles direction when the column is already active, else defaults to `asc`
+- A `<span th:if="${activeSortField == '{field}'}">` inside the `<a>` rendering `↑`/`↓` so E2E `toContainText` assertions work
+- Non-sortable columns (Account Number, Currency) stay as plain `<th>` text
+
+See full Thymeleaf expressions in the plan below this section.
+
+#### Regression conflict — accounts.spec.ts AC2.2 (DECISION NEEDED)
+
+`accounts.spec.ts` line 178: `expect(headers.nth(3)).toHaveText('Balance')` will FAIL after the template change.
+Reason: default sort is balance ASC, so the balance `<th>` innerText becomes "Balance ↑"; `toHaveText` does a full match.
+PLAN_A §5.4 explicitly requires changing lines 175, 177, 178 from `toHaveText` to `toContainText`.
+This update to `accounts.spec.ts` is **required** before implementing the template change.
+
+#### E2E run
+
+After both changes above: start backend (`mvn spring-boot:run`) and run `cd e2e && npx playwright test e2e/tests/account-sort.spec.ts`.
 
 ---
 

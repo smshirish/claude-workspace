@@ -172,10 +172,10 @@ test.describe('F2 — View All Accounts', () => {
     await page.waitForURL('**/accounts');
 
     const headers = page.locator('[data-testid="accounts-table"] thead th');
-    await expect(headers.nth(0)).toHaveText('Bank Name');
+    await expect(headers.nth(0)).toContainText('Bank Name');
     await expect(headers.nth(1)).toHaveText('Account Number');
-    await expect(headers.nth(2)).toHaveText('Account Type');
-    await expect(headers.nth(3)).toHaveText('Balance');
+    await expect(headers.nth(2)).toContainText('Account Type');
+    await expect(headers.nth(3)).toContainText('Balance');
     await expect(headers.nth(4)).toHaveText('Currency');
   });
 

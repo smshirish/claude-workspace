@@ -13,7 +13,9 @@
       "Bash(java -version)",
       "Bash(mvn help:evaluate -Dexpression=java.version -q -DforceStdout)",
       "Bash(dpkg -l)",
-      "Bash(apt-cache show *)"
+      "Bash(apt-cache show *)",
+      "Bash(mvn test-compile *)",
+      "Bash(xargs cat)"
     ]
   }
 }

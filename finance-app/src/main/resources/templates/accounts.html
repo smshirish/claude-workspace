@@ -43,10 +43,19 @@
 <table class="accounts-table" data-testid="accounts-table">
     <thead>
     <tr>
-        <th>Bank Name</th>
+        <th><a data-testid="sort-bankName"
+               th:href="@{/accounts(sortField='bankName',sortDir=${activeSortField == 'bankName' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'})}">Bank Name<span
+                th:if="${activeSortField == 'bankName'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
         <th>Account Number</th>
-        <th>Account Type</th>
-        <th>Balance</th>
+        <th><a data-testid="sort-accountType"
+               th:href="@{/accounts(sortField='accountType',sortDir=${activeSortField == 'accountType' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'})}">Account Type<span
+                th:if="${activeSortField == 'accountType'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
+        <th><a data-testid="sort-balance"
+               th:href="@{/accounts(sortField='balance',sortDir=${activeSortField == 'balance' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'})}">Balance<span
+                th:if="${activeSortField == 'balance'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
         <th>Currency</th>
     </tr>
     </thead>
