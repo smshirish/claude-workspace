@@ -1,6 +1,6 @@
 {
   "name": "Claude Code Development",
-  "image": "localhost/my-custom-devcontainer", 
+  "image": "localhost/my-custom-devcontainer",
   "features": {
     // Recommended to explicitly include Node.js to ensure compatibility [2]
     "ghcr.io/devcontainers/features/node:1": {},
@@ -18,18 +18,17 @@
   // Ensure the container runs as the 'node' user provided by the base image [4]
   "remoteUser": "node",
   "forwardPorts": [8080],
-   "runArgs": [
+  "runArgs": [
     "--cap-add=NET_ADMIN",
     "--cap-add=NET_RAW"
   ],
+  "remoteEnv": {
+    "JAVA_HOME": "/usr/lib/jvm/java-21-openjdk-amd64",
+    "PATH": "${containerEnv:PATH}:/usr/lib/jvm/java-21-openjdk-amd64/bin:/usr/share/maven/bin"
+  },
   "postCreateCommand": [
-    //"claude plugin marketplace add VoltAgent/awesome-claude-code-subagents" // Marketplace for claude sub agents ,not working, ran manually from command line in termminal
-    //claude plugin install voltagent-lang ,claude plugin install voltagent-qa-sec ,claude plugin install voltagent-core-dev
-    // sudo apt install maven
-    //sudo apt-get install -y openjdk-21-jdk-headless
-    //set java home in bashrc export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc
     "bash",
     "-c",
-    "sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless maven && echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc"
-	]
+    "sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless maven && echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc && echo 'export PATH=$PATH:/usr/lib/jvm/java-21-openjdk-amd64/bin' >> ~/.bashrc && cd /workspaces/claude-workspace/finance-app/e2e && npm install && npx playwright install chromium && npx playwright install-deps chromium"
+  ]
 }

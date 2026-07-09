@@ -15,7 +15,12 @@
       "Bash(dpkg -l)",
       "Bash(apt-cache show *)",
       "Bash(mvn test-compile *)",
-      "Bash(xargs cat)"
+      "Bash(xargs cat)",
+      "Bash(mvn spring-boot:run)",
+      "Bash(echo \"PID: $!\")",
+      "Bash(sleep 10 && tail -20 /tmp/spring-boot.log)",
+      "Read(//tmp/**)",
+      "Bash(npm install *)"
     ]
   }
 }
