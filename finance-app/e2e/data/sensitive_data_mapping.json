@@ -12,6 +12,16 @@
       "strategy": "sequential_id",
       "prefix": "ACCT",
       "keep_as_is": ["NA"]
+    },
+    {
+      "field": "balance",
+      "strategy": "random_amount",
+      "constraints": "integer, 0–499, zero preserved"
+    },
+    {
+      "field": "amt_other_currency",
+      "strategy": "random_amount",
+      "constraints": "mirrors anonymized balance for same-currency rows; zero preserved"
     }
   ],
   "notes": "RealToAnonymIds.json holds the value-level mappings and is gitignored. Together these two files are sufficient to reconstruct the original data from accounts_v1_anon.csv."
