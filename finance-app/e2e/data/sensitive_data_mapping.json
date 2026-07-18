@@ -1,0 +1,18 @@
+{
+  "source_file": "accounts_v1.csv",
+  "anonymized_file": "accounts_v1_anon.csv",
+  "sensitive_fields": [
+    {
+      "field": "bankName",
+      "strategy": "sequential_id",
+      "prefix": "BANK"
+    },
+    {
+      "field": "accountNumber",
+      "strategy": "sequential_id",
+      "prefix": "ACCT",
+      "keep_as_is": ["NA"]
+    }
+  ],
+  "notes": "RealToAnonymIds.json holds the value-level mappings and is gitignored. Together these two files are sufficient to reconstruct the original data from accounts_v1_anon.csv."
+}

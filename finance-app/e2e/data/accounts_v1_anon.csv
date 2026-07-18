@@ -1,0 +1,20 @@
+bankName,accountNumber,accountType,balance,currency,amt_other_currency,other_currency,fx_other_cur_to_chf,as_of_date,status,Latest_comment,extra_info,available_as_cash,cash/Investment,country,can_you_withdraw,
+BANK_001,ACCT_001,SAVINGS,12700,CHF,12700,CHF,1,17-May-26,active,,Monthly expenses to be paid from this account-This is the reserve amt.,yes,cash,CH,yes,
+BANK_002,ACCT_002,SAVINGS,843,CHF,843,CHF,1,17-May-26,active,,,yes,cash,CH,,
+BANK_003,ACCT_003,SAVINGS,0,CHF,0,CHF,1,17-May-26,inactive,Why is this account needed ?,,yes,cash,CH,,
+BANK_004,ACCT_004,SAVINGS,0,CHF,0,CHF,1,17-May-26,inactive,,,no,cash,CH,yes,
+BANK_005,ACCT_005,SAVINGS,129,CHF,129,CHF,1,17-May-26,active,,Adi account for school expenses,no,cash,CH,yes,
+BANK_006,ACCT_006,SAVINGS,0,CHF,0,CHF,1,,active,,,yes,cash,CH,,
+BANK_007,ACCT_007,SAVINGS,3709,CHF,3709,CHF,1,17-May-26,active,,Monthly mortgage payments deon from this acc to Mortgage transactions acc,no,cash,CH,yes,"no-transactions account ,no control"
+BANK_008,ACCT_008,SAVINGS,0,CHF,0,CHF,1,,active,,Mortgage balance acc-Shows current mortgage balance -managed by bank,no,cash,CH,yes,
+BANK_009,ACCT_009,INVESTMENT,16070,CHF,16070,CHF,1,17-May-26,active,,,yes,cash,CH,,
+BANK_010,ACCT_009,INVESTMENT,15417,CHF,15417,CHF,1,17-May-26,active,,,no,invest,CH,yes,
+BANK_011,ACCT_010,INVESTMENT,550000,CHF,550000,CHF,1,17-May-26,active,,Investment funds to be parked here,no,invest,CH,yes,
+BANK_012,ACCT_011,INVESTMENT,78230,CHF,78230,CHF,1,17-May-26,active,,Securities Value,yes,cash,CH,,
+BANK_013,ACCT_012,SAVINGS,1000,CHF,1000,CHF,1,17-May-26,active,Liquid cash at home,,yes,cash,CH,,
+BANK_014,ACCT_013,SAVINGS,0,CHF,0,EUR,0.93,17-May-26,active,,,yes,cash,CH,,
+BANK_015,ACCT_014,SAVINGS,275,CHF,275,CHF,1,17-May-26,active,,,yes,cash,CH,,
+BANK_016,NA,INVESTMENT,49700,CHF,49700,CHF,1,17-May-26,closed,,,no,invest,CH,no,Money transferred from CS 3rd pillar account to finpension 3rd pillar account
+BANK_017,NA,INVESTMENT,10925,CHF,10925,CHF,1,17-May-26,active,,,no,invest,CH,no,
+BANK_018,NA,INVESTMENT,31200,CHF,31200,CHF,1,17-May-26,active,,,no,invest,CH,yes,only non vested art can be sold
+BANK_019,NA,INVESTMENT,10900,CHF,10900,CHF,1,17-May-26,active,,,no,invest,CH,No ,Company award available after vesting

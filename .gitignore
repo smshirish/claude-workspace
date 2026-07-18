@@ -14,8 +14,12 @@ finance-app/pipeline/.last_*.json
 finance-app/tools/screenshots/node_modules/
 finance-app/tools/screenshots/output/
 finance-app/tools/csv-converter/sample/anonym_to_real_id.json
-finance-app/tools/csv-converter/sample/account.csv     
+finance-app/tools/csv-converter/sample/account.csv
 **/anonym_to_real_id.json
 
 # Private runtime files: anonymisation mapping, secrets, converter output
 finance-app/local/
+
+# Sensitive data — never commit
+finance-app/e2e/data/RealToAnonymIds.json
+finance-app/e2e/data/accounts_v1.csv
