@@ -80,9 +80,9 @@ public class AccountController {
     private List<BankAccount> applyFilter(List<BankAccount> accounts, String bankName,
                                            String accountNumber, String accountType) {
         return accounts.stream()
-                .filter(a -> bankName.isBlank() || a.bankName().toLowerCase().startsWith(bankName.toLowerCase()))
-                .filter(a -> accountNumber.isBlank() || a.accountNumber().toLowerCase().startsWith(accountNumber.toLowerCase()))
-                .filter(a -> accountType.isBlank() || a.accountType().name().toLowerCase().startsWith(accountType.toLowerCase()))
+                .filter(a -> bankName.isBlank() || a.bankName().toLowerCase().contains(bankName.toLowerCase()))
+                .filter(a -> accountNumber.isBlank() || a.accountNumber().toLowerCase().contains(accountNumber.toLowerCase()))
+                .filter(a -> accountType.isBlank() || a.accountType().name().toLowerCase().contains(accountType.toLowerCase()))
                 .toList();
     }
 
