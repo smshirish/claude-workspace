@@ -12,8 +12,7 @@
     "allow": [
       "Bash(mvn test*)",
       "Bash(mvn compile*)",
-      "Bash(mvn clean compile*)",
-      "Write(.claude/context/RESULT.json)"
+      "Bash(mvn clean compile*)"
     ],
     "defaultMode": "acceptEdits"
   }
