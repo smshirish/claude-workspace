@@ -1,7 +1,7 @@
 # Handoff
 
 ## Status
-Feature A (Column Sorting) — implementation complete; 9/9 unit/MockMvc tests pass. Template implemented. E2E tests FAILING (backend template resolution issue — `target/classes/templates/` was missing; fixed via `mvn process-resources`, but E2E run not yet verified clean).
+Feature A (Column Sorting) — COMPLETE. 9/9 unit/MockMvc tests pass + 8/8 E2E tests pass (verified 2026-07-09). Ready to start Feature B (Filter Bar).
 
 ### Completed
 - **Feature A — Implementation done** (2026-06-22)
@@ -52,11 +52,9 @@ All three stubs have been removed; production versions are in `src/main/java/com
 
 `e2e/tests/accounts.spec.ts` lines 175, 177, 178 changed from `toHaveText` to `toContainText` per PLAN_A §5.4.
 
-#### E2E status — FAILING
+#### E2E status — ALL PASSING (2026-07-09)
 
-E2E tests have NOT been verified green. Known issue: `target/classes/templates/` was empty at runtime causing Thymeleaf `TemplateInputException` on the homepage. Fixed by running `mvn process-resources`. Backend must be restarted before re-running E2E.
-
-Next: restart backend (`mvn spring-boot:run`) and run `cd e2e && npx playwright test e2e/tests/account-sort.spec.ts`.
+All 8 E2E tests in `account-sort.spec.ts` verified green. Feature A is fully complete.
 
 ---
 
