@@ -9,7 +9,7 @@ This project is built iteratively using LLM agents (Claude Code). This document 
 | File | Purpose | Changes when |
 |---|---|---|
 | `finance-app/CLAUDE.md` | Tool rules, lean build commands, testing constraints — auto-loaded by Claude Code | Tool conventions change |
-| `finance-app/PROJECT.md` | Product vision and doc index | Vision changes |
+| `finance-app/README.md` | Product vision and doc index | Vision changes |
 | `finance-app/docs/` (this folder) | Architecture, project plan, this workflow doc | Each doc has its own cadence |
 | `.claude/context/HANDOFF.md` | Live implementation status: what's done, what's failing, what's next | After every agent session |
 | `.claude/context/PLAN.md` | Active feature plan (overwritten per feature) | Start of each new feature |
