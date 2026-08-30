@@ -3,3 +3,4 @@
 - NEVER edit src/main/java
 - NEVER run the application, only mvn test
 - If a test requires a class that doesn't exist, create a stub interface — do not implement it
+- Do not generate tests for value objects or data records
