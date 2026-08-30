@@ -46,14 +46,49 @@ commit_stage() {
 
 result_field() { jq -r ".$1 // empty" "$RESULT_FILE" 2>/dev/null; }
 
-# role, prompt -> runs headless, requires the agent to write $RESULT_FILE
+COST_FILE="$CTX/COST_${FEATURE}.md"
+
+# appends one row per agent call immediately after it returns, since a retry's
+# `> $PIPELINE/.last_<role>.json` redirection truncates the snapshot the instant
+# the next call for that role launches.
+log_cost() {
+  local role="$1" attempt="$2" src="$3"
+  if [[ ! -f "$COST_FILE" ]]; then
+    { echo "# Token Cost & Timing Log: $FEATURE"
+      echo
+      echo "| Role | Attempt | Model(s) | Duration (ms) | Input Tok | Output Tok | Cache Read Tok | Cost (USD) |"
+      echo "|---|---|---|---|---|---|---|---|"
+    } > "$COST_FILE"
+  fi
+  local models duration in_tok out_tok cache_tok cost
+  models=$(jq -r '(.modelUsage // {}) | keys | join(",")' "$src" 2>/dev/null)
+  duration=$(jq -r '.duration_ms // 0' "$src" 2>/dev/null)
+  in_tok=$(jq -r '.usage.input_tokens // 0' "$src" 2>/dev/null)
+  out_tok=$(jq -r '.usage.output_tokens // 0' "$src" 2>/dev/null)
+  cache_tok=$(jq -r '.usage.cache_read_input_tokens // 0' "$src" 2>/dev/null)
+  cost=$(jq -r '.total_cost_usd // 0' "$src" 2>/dev/null)
+  printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+    "$role" "$attempt" "${models:-?}" "${duration:-0}" "${in_tok:-0}" "${out_tok:-0}" "${cache_tok:-0}" "${cost:-0}" >> "$COST_FILE"
+}
+
+append_cost_total() {
+  [[ -f "$COST_FILE" ]] || return 0
+  tail -1 "$COST_FILE" | grep -q '^\*\*Total cost' && return 0
+  local total
+  total=$(awk -F'|' '{v=$9; gsub(/^[ \t]+|[ \t]+$/,"",v); if (v ~ /^[0-9.]+$/) sum+=v} END{printf "%.6f", sum+0}' "$COST_FILE")
+  printf '\n**Total cost: $%s USD**\n' "$total" >> "$COST_FILE"
+}
+trap append_cost_total EXIT
+
+# role, prompt, attempt -> runs headless, requires the agent to write $RESULT_FILE
 run_agent() {
-  local role="$1" prompt="$2"
+  local role="$1" prompt="$2" attempt="${3:-1}"
   rm -f "$RESULT_FILE"
   claude -p "$prompt" \
     --settings "$SETTINGS/${role}.settings.json" \
     --permission-mode acceptEdits \
     --output-format json > "$PIPELINE/.last_${role}.json" || true
+  log_cost "$role" "$attempt" "$PIPELINE/.last_${role}.json"
   if [[ ! -f "$RESULT_FILE" ]]; then
     log "ERROR: $role exited without writing RESULT.json — see $PIPELINE/.last_${role}.json"
     exit 1
@@ -107,7 +142,7 @@ while true; do
   run_agent "dev-agent" "Follow .claude/rules/dev.md. Read $PLAN_FILE sections 1-3.
 Implement production code so all tests for feature $FEATURE pass. Run mvn test to verify.
 $feedback
-Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}."
+Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "$attempt"
   if [[ "$(result_field result)" == "PASS" ]]; then
     commit_stage "feat: implement $FEATURE (attempt $attempt)"
     break
@@ -120,15 +155,16 @@ Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"
   log "dev attempt $attempt failed, retrying"
 done
 
-# --- Reviewer (retry loop, bounces back to Dev) ---
+# --- Reviewer (retry loop: REQUEST_CHANGES -> encode as tests -> Dev fixes) ---
 round=0
 while true; do
   round=$((round + 1))
   write_state "reviewer" "$round"
   run_agent "reviewer-agent" "Follow .claude/rules/reviewer.md. Compare \`git diff main...$BRANCH\` against $PLAN_FILE.
 Write your verdict to $DRAFT_REVIEW_FILE.
-Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary\":\"APPROVE or REQUEST_CHANGES, one line\"}."
+Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary\":\"APPROVE or REQUEST_CHANGES, one line\"}." "$round"
   cp "$DRAFT_REVIEW_FILE" "$REVIEW_FILE"
+  commit_stage "review: round $round verdict for $FEATURE ($(result_field summary))"
   if [[ "$(result_field result)" == "PASS" ]]; then
     log "reviewer approved"
     break
@@ -137,10 +173,15 @@ Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary
     log "reviewer requested changes $MAX_ATTEMPTS times — escalating to human. See $REVIEW_FILE"
     exit 2
   fi
+  write_state "unit_test" "$round"
+  run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $REVIEW_FILE.
+For every blocking [CRITICAL]/[HIGH] issue describing a correctness or behavior gap, add or strengthen tests in src/test/java that encode the correct expected behavior. Do not modify src/main/java. mvn test may legitimately fail against the current (buggy) implementation — that is expected.
+Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs added/changed>\"}." "$round"
+  commit_stage "test: encode review feedback for $FEATURE (round $round)"
   write_state "dev" "$round"
   run_agent "dev-agent" "Follow .claude/rules/dev.md. Reviewer requested changes, see $REVIEW_FILE.
 Address every point, then run mvn test.
-Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}."
+Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "$round"
   commit_stage "fix: address review feedback for $FEATURE (round $round)"
 done
 
