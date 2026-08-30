@@ -1,0 +1,16 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(src/**)",
+      "Write(src/**)",
+      "Edit(e2e/**)",
+      "Write(e2e/**)",
+      "Bash(mvn spring-boot:run*)",
+      "Bash(npx *)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git merge*)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}

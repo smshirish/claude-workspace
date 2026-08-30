@@ -1,7 +1,7 @@
 # Handoff
 
 ## Status
-Feature A (Column Sorting) — COMPLETE. 9/9 unit/MockMvc tests pass + 8/8 E2E tests pass (verified 2026-07-09). Ready to start Feature B (Filter Bar).
+Feature A (Column Sorting) — COMPLETE. Full regression verified 2026-08-30: 96/96 unit/MockMvc/integration tests pass (`mvn test`) + 40/40 E2E tests pass (`npx playwright test`, all specs: account-sort, accounts, csv-validation, nav). Ready to start Feature B (Filter Bar).
 
 ### Completed
 - **Feature A — Implementation done** (2026-06-22)

@@ -21,8 +21,19 @@
       "Bash(sleep 10 && tail -20 /tmp/spring-boot.log)",
       "Read(//tmp/**)",
       "Bash(npm install *)",
-      "Bash(chmod +x *)",
-      "Bash(bash *)"
+      "Bash(git -C /workspaces/claude-workspace ls-files)",
+      "Bash(git -C /workspaces/claude-workspace log --oneline -- finance-app)",
+      "Bash(grep -iE \"started FinanceAppApplication|APPLICATION FAILED|Port 8080 was already in use|BindException|Web server failed to start\" /tmp/claude-1000/-workspaces-claude-workspace/26aec017-18f0-425d-9508-881553bbad41/scratchpad/springboot.log *)",
+      "WebFetch(domain:github.com)",
+      "Skill(update-config)",
+      "Skill(update-config:*)",
+      "Bash(git -C /workspaces/claude-workspace ls-remote https://github.com/github/spec-kit.git HEAD)",
+      "Bash(chmod +x /workspaces/claude-workspace/finance-app/.claude/orchestration/orchestrate.sh)",
+      "Bash(jq empty *)",
+      "Bash(bash -n /workspaces/claude-workspace/finance-app/.claude/orchestration/orchestrate.sh)",
+      "Bash(ps -p 35759 -o pid,ppid,etime,cmd)",
+      "Bash(ps -p 35759 -o pid,cmd)",
+      "Bash(git add *)"
     ]
   }
 }
