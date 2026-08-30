@@ -5,6 +5,7 @@ import com.finance.app.domain.exception.CsvRowValidationException;
 import com.finance.app.domain.exception.CsvSchemaException;
 import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountSortField;
+import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.model.SortDirection;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
@@ -18,6 +19,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -43,6 +45,9 @@ public class AccountController {
     public String showAccounts(
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false, defaultValue = "") String bankName,
+            @RequestParam(required = false, defaultValue = "") String accountNumber,
+            @RequestParam(required = false, defaultValue = "") String accountType,
             Model model) {
         AccountSortField field = sortField != null ? SORT_FIELD_MAP.get(sortField) : null;
         AccountSortCriteria criteria;
@@ -58,10 +63,27 @@ public class AccountController {
             activeField = "balance";
             activeDir = "asc";
         }
-        model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(criteria));
+
+        List<BankAccount> accounts = getAllAccountsUseCase.getAllAccounts(criteria);
+        accounts = applyFilter(accounts, bankName, accountNumber, accountType);
+
+        model.addAttribute("accounts", accounts);
         model.addAttribute("activeSortField", activeField);
         model.addAttribute("activeSortDir", activeDir);
+        model.addAttribute("filterBankName", bankName);
+        model.addAttribute("filterAccountNumber", accountNumber);
+        model.addAttribute("filterAccountType", accountType);
+        model.addAttribute("clearFilterUrl", "/accounts?sortField=" + activeField + "&sortDir=" + activeDir);
         return "accounts";
+    }
+
+    private List<BankAccount> applyFilter(List<BankAccount> accounts, String bankName,
+                                           String accountNumber, String accountType) {
+        return accounts.stream()
+                .filter(a -> bankName.isBlank() || a.bankName().toLowerCase().startsWith(bankName.toLowerCase()))
+                .filter(a -> accountNumber.isBlank() || a.accountNumber().toLowerCase().startsWith(accountNumber.toLowerCase()))
+                .filter(a -> accountType.isBlank() || a.accountType().name().toLowerCase().startsWith(accountType.toLowerCase()))
+                .toList();
     }
 
     @PostMapping("/import")
