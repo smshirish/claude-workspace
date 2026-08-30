@@ -17,7 +17,8 @@
       "Bash(sleep *)",
       "Bash(lsof *)",
       "Bash(kill *)",
-      "Bash(pkill *)"
+      "Bash(pkill *)",
+      "Write(.claude/context/RESULT.json)"
     ],
     "defaultMode": "acceptEdits"
   }
