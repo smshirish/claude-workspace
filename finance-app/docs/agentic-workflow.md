@@ -41,24 +41,26 @@ Every `*.settings.json` follows the same shape:
 ```
 
 - `defaultMode: acceptEdits` means any `Edit`/`Write` call that **isn't** matched by a `deny` rule is auto-accepted — no interactive prompt, which is required for a headless run. **It does not cover `Bash`.** A headless `claude -p` process has no human to approve a Bash command, so any shell command not matched by an explicit `allow` rule is silently denied — this bit us in the first real pipeline run (Unit Test Agent could write files but every `mvn test` invocation was denied, so it never produced `RESULT.json`). Each role's `allow` list is therefore scoped to exactly the commands its `rules/<role>.md` says it needs (e.g. unit-test-agent: `mvn test*`; e2e-agent: `mvn spring-boot:run*`, `npx playwright*`) — narrowest prefix that covers the role's actual job, not a blanket `Bash(*)`.
-- **`acceptEdits` itself isn't reliable across a monorepo, either.** `finance-app/` is a subdirectory of a larger git repo, not its own repo, so the enclosing repo's root `.claude/settings.local.json` is also in the settings stack Claude Code resolves for a headless process launched with cwd = `finance-app/`. That root file has no `defaultMode` set, and whatever merge precedence applies to that scalar field can leave the *effective* default back at interactive "default" — which auto-denies in headless mode — even though the role's own `--settings` file says `acceptEdits`. `allow` arrays don't have this problem: they get unioned across every settings source, so an explicit `allow` entry always applies regardless of how `defaultMode` resolves. This surfaced as a second, distinct failure after the Bash fix: `mvn test` ran fine, but the plain `Write` call to `.claude/context/RESULT.json` was still denied. Fix is the same shape as the Bash one — every role's `allow` list also carries an explicit entry for its own coordination-file output (`Write(.claude/context/RESULT.json)` on all five; `Write(.claude/context/PLAN_*.md)` on spec-agent; `Write(.claude/context/REVIEW_*.md)` on reviewer-agent) — do not rely on `defaultMode` alone to cover writes to `.claude/context/`.
+- **`.claude/**` is a hardcoded-protected path — no `allow` entry can open it.** After the Bash fix, `mvn test` ran fine but `unit-test-agent` still couldn't produce `RESULT.json`: every `Write` to `.claude/context/RESULT.json`, plus every `Bash`-based workaround (heredoc, `printf`, `python3 -c`), was denied. Isolated testing (running `claude -p` by hand with the exact same settings/flags) proved this has nothing to do with `defaultMode` or `permissions.allow` at all — even an `allow` entry naming the file explicitly didn't help. Any `Write` under `.claude/context/` is blocked by a "sensitive path" policy baked into Claude Code itself, protecting its own config directory from being rewritten by an agent it's supervising. A plain, non-`.claude` directory (e.g. `pipeline/`) is completely unaffected — same settings file, same `acceptEdits` mode, write succeeds immediately. **The fix is architectural, not a settings tweak**: agent-writable coordination output was moved out of `.claude/` entirely (see §3) — `.claude/` stays fully protected, exactly as it should be.
 - The `deny` array is the actual guardrail and always wins over `allow`/`defaultMode`. A rule like `Edit(src/test/**)` blocks the Dev Agent from ever modifying test files, regardless of what its prompt says, what the model decides mid-task, or what's in its `allow` list.
 - `Bash(git commit*)` / `push*` / `merge*` are denied identically across every role — git history is the orchestrator's exclusive responsibility (see §4).
-- Reviewer additionally has no path carved out for its own output: `.claude/context/REVIEW_<X>.md` is *not* matched by any `deny(src/**|e2e/**)` rule, so it remains writable under `acceptEdits` — this is intentional, not an oversight. "Read-only" means read-only over the codebase, not literally zero bytes written anywhere. Reviewer's `allow` list (`git diff*`, `git log*`, `git show*`) is read-only at the git level too — nothing in it can mutate history.
+- Reviewer additionally has no path carved out for its own output: `pipeline/REVIEW_<X>.md` is *not* matched by any `deny(src/**|e2e/**)` rule, so it remains writable under `acceptEdits` — this is intentional, not an oversight. "Read-only" means read-only over the codebase, not literally zero bytes written anywhere. Reviewer's `allow` list (`git diff*`, `git log*`, `git show*`) is read-only at the git level too — nothing in it can mutate history.
 
 ---
 
 ## 3. Coordination contract (how stateless processes hand off work)
 
-Since each role is a fresh process with no memory of the others, everything they need to communicate is a file:
+Since each role is a fresh process with no memory of the others, everything they need to communicate is a file. All agent-*written* files live under `pipeline/` (plain directory, not under `.claude/`) — every role can Read `.claude/context/**` freely (Read is never restricted), but only the orchestrator itself, a trusted plain bash script with no permission gate, ever writes into `.claude/context/`:
 
 | File | Written by | Read by | Committed to git? |
 |---|---|---|---|
-| `.claude/context/PLAN_<Feature>.md` | Spec Agent | every downstream role | Yes — permanent record, same as existing `PLAN_A/B/C_*.md` |
-| `.claude/context/RESULT.json` | whichever role just ran | orchestrator only | No (gitignored, ephemeral, overwritten every stage) |
-| `.claude/context/REVIEW_<Feature>.md` | Reviewer Agent | orchestrator, Dev Agent (on request-changes) | Yes — audit trail of what the reviewer flagged |
-| `.claude/context/WORKFLOW_STATE.json` | orchestrator | orchestrator (crash/resume visibility) | No (gitignored, ephemeral) |
-| `.claude/context/.last_<role>.json` | `claude -p --output-format json` | orchestrator, for debugging a failed stage | No (gitignored) |
+| `pipeline/PLAN_<Feature>.md` | Spec Agent (draft) | orchestrator (copies to `.claude/context/PLAN_<Feature>.md`) | No — ephemeral draft |
+| `.claude/context/PLAN_<Feature>.md` | orchestrator (`cp` from the draft, after spec stage PASSes) | every downstream role | Yes — permanent record, same as existing `PLAN_A/B/C_*.md` |
+| `pipeline/RESULT.json` | whichever role just ran | orchestrator only | No (gitignored, ephemeral, overwritten every stage) |
+| `pipeline/REVIEW_<Feature>.md` | Reviewer Agent (draft) | orchestrator (copies to `.claude/context/REVIEW_<Feature>.md`) | No — ephemeral draft |
+| `.claude/context/REVIEW_<Feature>.md` | orchestrator (`cp` from the draft, after every reviewer round) | orchestrator, Dev Agent (on request-changes) | Yes — audit trail of what the reviewer flagged |
+| `pipeline/WORKFLOW_STATE.json` | orchestrator | orchestrator (crash/resume visibility) | No (gitignored, ephemeral) |
+| `pipeline/.last_<role>.json` | `claude -p --output-format json` | orchestrator, for debugging a failed stage | No (gitignored) |
 
 **`RESULT.json` is the hard contract every role prompt ends with**, e.g.:
 
@@ -67,6 +69,8 @@ Since each role is a fresh process with no memory of the others, everything they
 ```
 
 The orchestrator only reads this file to decide pass/fail — never the role's free-text stdout. If a role exits without writing it, the orchestrator treats that as a hard failure (`orchestrate.sh` line: `[[ ! -f "$RESULT_FILE" ]] → exit 1`), because a role that can't confirm its own output can't be trusted to have done it correctly.
+
+**Why the draft/copy indirection for PLAN and REVIEW:** these two are meant to be permanent, git-committed artifacts under `.claude/context/`, matching the existing `PLAN_A/B/C_*.md` convention — but the Spec/Reviewer agents that produce them are headless roles subject to the `.claude/` write protection described in §2. They draft into `pipeline/` instead; the orchestrator (unrestricted, since it's not itself a permission-gated `claude -p` call) does a plain `cp` into the real location right after the stage passes.
 
 ---
 
@@ -112,7 +116,7 @@ cd finance-app
 
 - If `.claude/context/PLAN_FilterBar.md` already exists (as it does for the three planned Account Listing features), the Spec stage is skipped and the pipeline starts at Unit Test.
 - Prerequisites for the E2E stage are the same as manual E2E runs: nothing else needs to be running beforehand — the E2E Agent starts the backend itself (`mvn spring-boot:run`, per `rules/e2e.md`).
-- On any halt (`exit 1` = hard failure, `exit 2` = retry cap hit), `WORKFLOW_STATE.json` still reflects the last attempted stage, and `.claude/context/.last_<role>.json` holds that role's full transcript for debugging.
+- On any halt (`exit 1` = hard failure, `exit 2` = retry cap hit), `pipeline/WORKFLOW_STATE.json` still reflects the last attempted stage, and `pipeline/.last_<role>.json` holds that role's full transcript for debugging.
 
 ---
 

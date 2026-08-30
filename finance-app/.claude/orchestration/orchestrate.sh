@@ -10,13 +10,21 @@ cd "$REPO_ROOT/finance-app"
 
 CTX=".claude/context"
 SETTINGS=".claude/orchestration/settings"
-STATE_FILE="$CTX/WORKFLOW_STATE.json"
-RESULT_FILE="$CTX/RESULT.json"
+# .claude/** is a hardcoded-protected path: headless Write/Edit/Bash calls are
+# denied there regardless of permissions.allow. Agents draft/write here instead;
+# the orchestrator (a plain trusted script, not permission-gated) copies
+# finished PLAN/REVIEW drafts into $CTX for the permanent, committed record.
+PIPELINE="pipeline"
+mkdir -p "$PIPELINE"
+STATE_FILE="$PIPELINE/WORKFLOW_STATE.json"
+RESULT_FILE="$PIPELINE/RESULT.json"
 MAX_ATTEMPTS=3
 
 FEATURE="${1:?Usage: orchestrate.sh <FeatureName>}"
 PLAN_FILE="$CTX/PLAN_${FEATURE}.md"
 REVIEW_FILE="$CTX/REVIEW_${FEATURE}.md"
+DRAFT_PLAN_FILE="$PIPELINE/PLAN_${FEATURE}.md"
+DRAFT_REVIEW_FILE="$PIPELINE/REVIEW_${FEATURE}.md"
 BRANCH="feature/${FEATURE}"
 
 log() { printf '[orchestrator] %s\n' "$*"; }
@@ -45,9 +53,9 @@ run_agent() {
   claude -p "$prompt" \
     --settings "$SETTINGS/${role}.settings.json" \
     --permission-mode acceptEdits \
-    --output-format json > "$CTX/.last_${role}.json" || true
+    --output-format json > "$PIPELINE/.last_${role}.json" || true
   if [[ ! -f "$RESULT_FILE" ]]; then
-    log "ERROR: $role exited without writing RESULT.json — see $CTX/.last_${role}.json"
+    log "ERROR: $role exited without writing RESULT.json — see $PIPELINE/.last_${role}.json"
     exit 1
   fi
 }
@@ -69,12 +77,13 @@ Follow .claude/rules/spec.md. Feature: $FEATURE.
 Requirements (from $REQUEST_FILE):
 $(cat "$REQUEST_FILE")
 
-Write the plan to $PLAN_FILE using $CTX/PLAN_template.md as the structure.
+Write the plan to $DRAFT_PLAN_FILE using $CTX/PLAN_template.md as the structure.
 When done, write $RESULT_FILE as {"stage":"spec","result":"PASS","summary":"<one line>"}.
 EOF
 )
   run_agent "spec-agent" "$spec_prompt"
   [[ "$(result_field result)" == "PASS" ]] || { log "spec stage failed: $(result_field summary)"; exit 1; }
+  cp "$DRAFT_PLAN_FILE" "$PLAN_FILE"
   commit_stage "spec: draft $PLAN_FILE from $REQUEST_FILE"
 else
   log "$PLAN_FILE already exists, skipping spec stage"
@@ -117,8 +126,9 @@ while true; do
   round=$((round + 1))
   write_state "reviewer" "$round"
   run_agent "reviewer-agent" "Follow .claude/rules/reviewer.md. Compare \`git diff main...$BRANCH\` against $PLAN_FILE.
-Write your verdict to $REVIEW_FILE.
+Write your verdict to $DRAFT_REVIEW_FILE.
 Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary\":\"APPROVE or REQUEST_CHANGES, one line\"}."
+  cp "$DRAFT_REVIEW_FILE" "$REVIEW_FILE"
   if [[ "$(result_field result)" == "PASS" ]]; then
     log "reviewer approved"
     break
@@ -141,7 +151,7 @@ Start the backend (mvn spring-boot:run, background) if not already running, then
 Write $RESULT_FILE as {\"stage\":\"e2e\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, e.g. 8/8 passed>\"}."
 commit_stage "test(e2e): add e2e specs for $FEATURE"
 if [[ "$(result_field result)" != "PASS" ]]; then
-  log "E2E failed: $(result_field summary) — inspect $CTX/.last_e2e-agent.json; route back to dev or unit-test manually"
+  log "E2E failed: $(result_field summary) — inspect $PIPELINE/.last_e2e-agent.json; route back to dev or unit-test manually"
   exit 2
 fi
 

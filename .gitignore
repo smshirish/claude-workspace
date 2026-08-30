@@ -6,6 +6,4 @@ finance-app/e2e/playwright-report/
 finance-app/tools/csv-converter/sample/accounts.xlsx
 finance-app/tools/csv-converter/sample/accounts_converted.csv
 finance-app/tools/csv-converter/sample/accounts.csv
-finance-app/.claude/context/WORKFLOW_STATE.json
-finance-app/.claude/context/RESULT.json
-finance-app/.claude/context/.last_*.json
+finance-app/pipeline/
