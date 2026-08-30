@@ -34,15 +34,16 @@ Every `*.settings.json` follows the same shape:
 {
   "permissions": {
     "deny": [ "Edit(<forbidden-path>/**)", "Write(<forbidden-path>/**)", "Bash(git commit*)", "Bash(git push*)", "Bash(git merge*)" ],
+    "allow": [ "Bash(mvn test*)", "..." ],
     "defaultMode": "acceptEdits"
   }
 }
 ```
 
-- `defaultMode: acceptEdits` means any `Edit`/`Write` call that **isn't** matched by a `deny` rule is auto-accepted — no interactive prompt, which is required for a headless run.
-- The `deny` array is the actual guardrail. A rule like `Edit(src/test/**)` blocks the Dev Agent from ever modifying test files, regardless of what its prompt says or what the model decides mid-task.
+- `defaultMode: acceptEdits` means any `Edit`/`Write` call that **isn't** matched by a `deny` rule is auto-accepted — no interactive prompt, which is required for a headless run. **It does not cover `Bash`.** A headless `claude -p` process has no human to approve a Bash command, so any shell command not matched by an explicit `allow` rule is silently denied — this bit us in the first real pipeline run (Unit Test Agent could write files but every `mvn test` invocation was denied, so it never produced `RESULT.json`). Each role's `allow` list is therefore scoped to exactly the commands its `rules/<role>.md` says it needs (e.g. unit-test-agent: `mvn test*`; e2e-agent: `mvn spring-boot:run*`, `npx playwright*`) — narrowest prefix that covers the role's actual job, not a blanket `Bash(*)`.
+- The `deny` array is the actual guardrail and always wins over `allow`/`defaultMode`. A rule like `Edit(src/test/**)` blocks the Dev Agent from ever modifying test files, regardless of what its prompt says, what the model decides mid-task, or what's in its `allow` list.
 - `Bash(git commit*)` / `push*` / `merge*` are denied identically across every role — git history is the orchestrator's exclusive responsibility (see §4).
-- Reviewer additionally has no path carved out for its own output: `.claude/context/REVIEW_<X>.md` is *not* matched by any `deny(src/**|e2e/**)` rule, so it remains writable under `acceptEdits` — this is intentional, not an oversight. "Read-only" means read-only over the codebase, not literally zero bytes written anywhere.
+- Reviewer additionally has no path carved out for its own output: `.claude/context/REVIEW_<X>.md` is *not* matched by any `deny(src/**|e2e/**)` rule, so it remains writable under `acceptEdits` — this is intentional, not an oversight. "Read-only" means read-only over the codebase, not literally zero bytes written anywhere. Reviewer's `allow` list (`git diff*`, `git log*`, `git show*`) is read-only at the git level too — nothing in it can mutate history.
 
 ---
 
@@ -120,7 +121,7 @@ This section exists so future changes are made in the right file, not by re-deri
 
 | You want to... | Edit this |
 |---|---|
-| Change what a role is/isn't allowed to touch | `orchestration/settings/<role>.settings.json` — add/remove `deny` entries. Prefer the narrowest glob that expresses the boundary (`Edit(src/test/**)`, not a bare `Edit`). |
+| Change what a role is/isn't allowed to touch | `orchestration/settings/<role>.settings.json` — add/remove `deny` entries for scope, or `allow` entries for new Bash commands the role needs to run. Prefer the narrowest glob that expresses the boundary (`Edit(src/test/**)`, not a bare `Edit`; `Bash(mvn test*)`, not `Bash(mvn *)`). Remember: `deny` always wins over `allow`. |
 | Change a role's instructions/behavior | `rules/<role>.md` — this is the actual prompt content each headless invocation is told to follow. |
 | Change the retry caps | `MAX_ATTEMPTS` in `orchestration/orchestrate.sh` (currently 3 for both the Dev↔Test loop and the Dev↔Reviewer loop). |
 | Change the git strategy (e.g. squash instead of per-stage commits) | `commit_stage()` in `orchestration/orchestrate.sh`. |

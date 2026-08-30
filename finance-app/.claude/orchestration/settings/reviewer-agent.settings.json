@@ -11,6 +11,11 @@
       "Bash(git push*)",
       "Bash(git merge*)"
     ],
+    "allow": [
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git show*)"
+    ],
     "defaultMode": "acceptEdits"
   }
 }

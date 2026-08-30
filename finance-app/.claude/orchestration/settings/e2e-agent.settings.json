@@ -9,6 +9,16 @@
       "Bash(git push*)",
       "Bash(git merge*)"
     ],
+    "allow": [
+      "Bash(mvn spring-boot:run*)",
+      "Bash(cd e2e && npx *)",
+      "Bash(npx playwright*)",
+      "Bash(curl *localhost*)",
+      "Bash(sleep *)",
+      "Bash(lsof *)",
+      "Bash(kill *)",
+      "Bash(pkill *)"
+    ],
     "defaultMode": "acceptEdits"
   }
 }

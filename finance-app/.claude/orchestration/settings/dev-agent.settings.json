@@ -9,6 +9,11 @@
       "Bash(git push*)",
       "Bash(git merge*)"
     ],
+    "allow": [
+      "Bash(mvn test*)",
+      "Bash(mvn compile*)",
+      "Bash(mvn clean compile*)"
+    ],
     "defaultMode": "acceptEdits"
   }
 }
