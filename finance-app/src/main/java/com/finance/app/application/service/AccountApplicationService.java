@@ -61,6 +61,6 @@ public class AccountApplicationService implements ImportAccountsUseCase, GetAllA
 
     private boolean matches(String value, String filter) {
         return filter == null || filter.isBlank() ||
-                value.toLowerCase().startsWith(filter.toLowerCase());
+                value.toLowerCase().contains(filter.toLowerCase());
     }
 }

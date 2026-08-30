@@ -4,41 +4,36 @@ Reviewed: `git diff main...feature/B_FilterBar` against `.claude/context/PLAN_B_
 
 ---
 
-### Issue 1 — `startsWith` used instead of `contains` — FR-3 violated [CRITICAL]
+### Issue 1 — `startsWith` used instead of `contains` in `AccountApplicationService` — FR-3 violated [CRITICAL]
 
-**Files:** `AccountController.java:83-85`, `AccountApplicationService.java:64`
+**File:** `src/main/java/com/finance/app/application/service/AccountApplicationService.java`, `matches()` private method (last method in the class)
 
-FR-3 explicitly requires a **`contains`** match ("partial, case-insensitive match"). Both filtering implementations use `startsWith`:
+FR-3 requires a `contains` (substring) match. The service's `matches` helper reads:
 
 ```java
-// AccountController.java:83
-a.bankName().toLowerCase().startsWith(bankName.toLowerCase())
-// AccountApplicationService.java:64
 value.toLowerCase().startsWith(filter.toLowerCase())
 ```
 
-AC-1 criterion: "accounts where `bankName` **contains** 'chase' (case-insensitive)". A filter term that is a mid-string fragment (e.g., "hase", "ank Name") will not match even though it should. The unit and MockMvc tests do not catch this because all test inputs happen to be prefixes of the fixture data.
+The controller's private `applyFilter()` correctly uses `.contains()` (lines 83–85), but the service-level implementation is wrong. Because all test fixture inputs happen to be prefixes of the test data (e.g., `"chase"`, `"CHA"`, `"SAV"`, `"000111"`), the 7 unit tests in `AccountApplicationServiceFilterTest` pass coincidentally. A mid-string filter such as `"hase"` would silently return zero results.
 
-**Fix:** Replace `.startsWith(...)` with `.contains(...)` in both locations.
+**Fix:** Replace `.startsWith(...)` with `.contains(...)` in `AccountApplicationService.matches()`.
 
 ---
 
 ### Issue 2 — `FilterAccountsUseCase` is dead code; controller bypasses it [CRITICAL]
 
-**Files:** `AccountController.java:10-11,67-68`, `AccountApplicationService.java:54-65`
+**Files:** `AccountController.java:67–87`, `AccountApplicationService.java` (`filterAccounts` method)
 
-Plan §3.5 states the controller should "Build `AccountFilterCriteria`; call `filterAccountsUseCase` when any criterion is non-blank; else call `getAllAccountsUseCase`".
+Plan §3.5 states the controller should "call `filterAccountsUseCase` when any criterion is non-blank; else call `getAllAccountsUseCase`". The actual controller never imports or calls `FilterAccountsUseCase`. Instead it always calls `getAllAccountsUseCase.getAllAccounts(criteria)` and then filters via the private `applyFilter()` method.
 
-The actual controller never imports or calls `FilterAccountsUseCase`. It always calls `getAllAccountsUseCase.getAllAccounts(criteria)` then applies an inline private `applyFilter()` method. The fully-implemented `AccountApplicationService.filterAccounts()` is never invoked. This means:
-
-- The `FilterAccountsUseCase` port, its implementation in `AccountApplicationService`, and any bean wiring for it are dead code from the controller's perspective.
-- The 7 unit tests in `AccountApplicationServiceFilterTest` test an execution path that is never triggered by any HTTP request.
+Consequences:
+- `FilterAccountsUseCase.filterAccounts()` is never exercised by any HTTP request.
+- All 7 unit tests in `AccountApplicationServiceFilterTest` test a code path that is never invoked by the controller.
+- `AccountControllerFilterTest` never injects or mocks `FilterAccountsUseCase`; it validates only the private-method path.
 
 **Fix (choose one):**
-- (a) Wire the controller to inject and call `FilterAccountsUseCase` as planned; remove the private `applyFilter()` method.
-- (b) Remove the `FilterAccountsUseCase` port, its implementation, and the service-level `filterAccounts()` method; keep only the controller-level `applyFilter()` logic. Delete/update tests accordingly.
-
-Option (a) matches the plan. Either must be chosen — the current state has both paths and neither is authoritative.
+- (a) Wire `FilterAccountsUseCase` into the controller and call it when any filter criterion is non-blank. Remove the private `applyFilter()` method. Matches the plan.
+- (b) Remove the `FilterAccountsUseCase` port, its implementation in `AccountApplicationService`, and the service-level tests; keep only the controller-level `applyFilter()`. Update plan §3.3/§3.5 accordingly.
 
 ---
 
@@ -48,7 +43,7 @@ Option (a) matches the plan. Either must be chosen — the current state has bot
 - `src/test/java/com/finance/app/domain/model/AccountFilterCriteria.java`
 - `src/test/java/com/finance/app/domain/port/in/FilterAccountsUseCase.java`
 
-Both stub files carry the comment "delete once production [class/interface] lands in src/main/java" — but they were not deleted. Production equivalents now exist in `src/main/java`. Having two classes with the same fully-qualified name on the test classpath creates ambiguity and can cause unexpected behaviour depending on classpath ordering.
+Both stub files carry the comment "delete once production [class/interface] lands in src/main/java". Production equivalents now exist in `src/main/java`. Two classes with the same fully-qualified name on the test classpath create ambiguity and can cause unexpected behaviour depending on classpath ordering.
 
 **Fix:** Delete both stub files.
 
@@ -56,9 +51,9 @@ Both stub files carry the comment "delete once production [class/interface] land
 
 ### Issue 4 — Stale "RUNTIME FAILURE EXPECTED" and `// FAILS` comments [MEDIUM]
 
-**File:** `AccountControllerFilterTest.java:31-38,71-72,84-85,97-98,113-114,127-129`
+**File:** `AccountControllerFilterTest.java`, class-level Javadoc (lines 31–38) and inline comments on every `andExpect` in C-1 through C-5
 
-The class-level Javadoc and inline test comments state that the tests will fail until the controller is implemented. The controller is now implemented and these tests pass. The comments are actively misleading to future readers.
+The feature is now implemented; these tests pass. The comments are actively misleading to future readers.
 
 **Fix:** Remove or update the stale failure comments.
 
@@ -66,14 +61,14 @@ The class-level Javadoc and inline test comments state that the tests will fail 
 
 ### Issue 5 — C-4 test does not assert sort order [MINOR]
 
-**File:** `AccountControllerFilterTest.java:104-115`
+**File:** `AccountControllerFilterTest.java:104–115`
 
-C-4 scenario description is "filtered Chase rows sorted by balance asc" but the assertion only checks `hasSize(2)`. It does not verify the order of accounts, so the sort-after-filter path is not validated by this test.
+C-4's scenario is "filtered Chase rows sorted by balance asc" but the assertion only checks `hasSize(2)`. Order is not verified, so the sort-after-filter behaviour is untested.
 
-**Fix:** Add assertion on `accounts` list order (e.g., first element has balance `200.00`, second has `500.00`).
+**Fix:** Assert element order, e.g., first account balance `200.00`, second `500.00`.
 
 ---
 
 ### Issue 6 — E2E test file missing [NOTE — outside Dev Agent scope]
 
-`e2e/tests/account-filter.spec.ts` does not exist. This is expected if the E2E agent stage has not run yet; noting here for the orchestrator's awareness. The E2E stage must create this file before the feature can be considered complete.
+`e2e/tests/account-filter.spec.ts` does not exist. Plan §5 calls for this file with 6 test cases (E2E-1 through E2E-6). The E2E agent stage must create it before the feature is complete.

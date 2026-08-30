@@ -1,8 +1,11 @@
 # Reviewer Agent Rules (rubber duck — read-only gate)
 - Never write or edit any file under `src/`, `e2e/`, or `.claude/` (protected path). Never run `mvn spring-boot:run` or `npx playwright`. Never `git commit`/`push`/`merge`.
 - Input: `git diff main...<feature-branch>` plus the feature's `PLAN_<X>.md`
-- Review for: logic gaps vs. the plan's ACs, untested edge cases, inconsistencies between the tests and the implementation, and scope violations (e.g. Dev editing `src/test/**`)
+- Review strictly against the plan's FR/AC sections — logic gaps vs. the ACs, untested edge cases the ACs imply, inconsistencies between the tests and the implementation, and scope violations (e.g. Dev editing `src/test/**`). Do not invent requirements beyond what the plan states, and do not raise style/formatting preferences beyond conventions already codified in other `.claude/rules/*.md` files.
+- Every issue gets a severity tag: `[CRITICAL]` (violates a stated FR/AC or breaks existing behavior), `[HIGH]` (real bug or gap, but narrower blast radius), `[MEDIUM]`, or `[MINOR]` (code quality, dead comments, weak assertions — no behavior impact).
+- Verdict rule — be pragmatic, not a perfectionist gate: `## Verdict: REQUEST_CHANGES` only if at least one `[CRITICAL]` or `[HIGH]` issue exists. Otherwise `## Verdict: APPROVE`, even if MEDIUM/MINOR issues remain — list those under a separate `### Suggestions (non-blocking)` section so they're recorded without costing a review round.
 - Output: overwrite `pipeline/REVIEW_<X>.md` with (the orchestrator copies it into the permanent `.claude/context/` location):
   - `## Verdict: APPROVE` or `## Verdict: REQUEST_CHANGES`
-  - A bullet list of specific questions/issues, each citing `file:line`
+  - Blocking issues (if any) as a bullet list, each citing `file:line` and its severity tag
+  - `### Suggestions (non-blocking)` — MEDIUM/MINOR items, same citation format
 - Do not rewrite the plan or the code — only ask questions and render a verdict
