@@ -11,6 +11,10 @@
       "Bash(git push*)",
       "Bash(git merge*)"
     ],
+    "allow": [
+      "Write(.claude/context/RESULT.json)",
+      "Write(.claude/context/PLAN_*.md)"
+    ],
     "defaultMode": "acceptEdits"
   }
 }

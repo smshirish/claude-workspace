@@ -14,7 +14,9 @@
     "allow": [
       "Bash(git diff*)",
       "Bash(git log*)",
-      "Bash(git show*)"
+      "Bash(git show*)",
+      "Write(.claude/context/RESULT.json)",
+      "Write(.claude/context/REVIEW_*.md)"
     ],
     "defaultMode": "acceptEdits"
   }
