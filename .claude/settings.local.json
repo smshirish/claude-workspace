@@ -33,7 +33,12 @@
       "Bash(bash -n /workspaces/claude-workspace/finance-app/.claude/orchestration/orchestrate.sh)",
       "Bash(ps -p 35759 -o pid,ppid,etime,cmd)",
       "Bash(ps -p 35759 -o pid,cmd)",
-      "Bash(git add *)"
+      "Bash(git add *)",
+      "Bash(nohup .claude/orchestration/orchestrate.sh B_FilterBar)",
+      "Bash(echo \"started pid $!\")",
+      "Bash(cd /workspaces/claude-workspace/finance-app *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)"
     ]
   }
 }
