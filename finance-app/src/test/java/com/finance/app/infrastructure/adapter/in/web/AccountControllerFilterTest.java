@@ -3,6 +3,8 @@ package com.finance.app.infrastructure.adapter.in.web;
 import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountType;
 import com.finance.app.domain.model.BankAccount;
+import com.finance.app.domain.model.AccountFilterCriteria;
+import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import org.junit.jupiter.api.Test;
@@ -52,6 +54,7 @@ class AccountControllerFilterTest {
     @Autowired MockMvc mockMvc;
     @MockBean ImportAccountsUseCase importAccountsUseCase;
     @MockBean GetAllAccountsUseCase getAllAccountsUseCase;
+    @MockBean FilterAccountsUseCase filterAccountsUseCase;
 
     private static final BankAccount CHASE_SAVINGS  = BankAccount.create("Chase", "000111222", AccountType.SAVINGS,  new BigDecimal("500.00"), "USD");
     private static final BankAccount CHASE_CHECKING = BankAccount.create("Chase", "333444555", AccountType.CHECKING, new BigDecimal("200.00"), "USD");
@@ -127,5 +130,20 @@ class AccountControllerFilterTest {
                 .andExpect(model().attribute("filterBankName", ""))        // FAILS — not set
                 .andExpect(model().attribute("filterAccountType", ""))     // FAILS — not set
                 .andExpect(model().attribute("filterAccountNumber", "")); // FAILS — not set
+    }
+
+    // C-6: controller must delegate to FilterAccountsUseCase, not bypass it via a private method
+    @Test
+    @WithMockUser
+    void getAccounts_withBankNameFilter_delegatesToFilterAccountsUseCase() throws Exception {
+        given(getAllAccountsUseCase.getAllAccounts(any(AccountSortCriteria.class)))
+                .willReturn(List.of(CHASE_SAVINGS, CHASE_CHECKING, ALLY_SAVINGS, BOFA_CHECKING));
+        given(filterAccountsUseCase.filterAccounts(any(AccountFilterCriteria.class)))
+                .willReturn(List.of(CHASE_SAVINGS, CHASE_CHECKING));
+
+        mockMvc.perform(get("/accounts").param("bankName", "chase"))
+                .andExpect(status().isOk());
+
+        then(filterAccountsUseCase).should().filterAccounts(any(AccountFilterCriteria.class));
     }
 }
