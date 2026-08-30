@@ -62,7 +62,7 @@ test.describe('Shared Navigation Menu', () => {
   test('Sign Out button logs the user out and redirects to /login', async ({ page }) => {
     await page.goto('/dashboard');
     await page.click('[data-testid="nav-signout-button"]');
-    await page.waitForURL('**/login');
+    await page.waitForURL(/\/login/);
     expect(page.url()).toContain('/login');
   });
 

@@ -90,11 +90,11 @@ test.describe('F1 — Import Accounts', () => {
     const rows = table.locator('tbody tr');
     await expect(rows).toHaveCount(3);
 
-    // Spot-check first row data
+    // Default sort is balance ASC — Citi (-350.00) is first row
     const firstRow = rows.first();
-    await expect(firstRow.locator('td').nth(0)).toHaveText('Chase');
-    await expect(firstRow.locator('td').nth(1)).toHaveText('000111222');
-    await expect(firstRow.locator('td').nth(2)).toHaveText('CHECKING');
+    await expect(firstRow.locator('td').nth(0)).toHaveText('Citi');
+    await expect(firstRow.locator('td').nth(1)).toHaveText('666777888');
+    await expect(firstRow.locator('td').nth(2)).toHaveText('CREDIT');
   });
 
   // AC1.4: Re-upload replaces all previous accounts
