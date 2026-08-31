@@ -6,3 +6,5 @@
 | dev-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 196317 | 13 | 2211 | 348140 | 0.22574575000000002 |
 | reviewer-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 187965 | 18 | 10193 | 664396 | 0.5178563 |
 | e2e-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 80575 | 8 | 2689 | 174487 | 0.17917534999999998 |
+
+**Total cost: $1.187579 USD**
