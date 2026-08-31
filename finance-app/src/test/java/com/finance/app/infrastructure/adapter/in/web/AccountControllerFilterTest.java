@@ -65,14 +65,14 @@ class AccountControllerFilterTest {
     @Test
     @WithMockUser
     void getAccounts_filterByBankName_returnsFilteredRowsAndSetsModelAttr() throws Exception {
-        given(getAllAccountsUseCase.getAllAccounts(any(AccountSortCriteria.class)))
-                .willReturn(List.of(CHASE_SAVINGS, CHASE_CHECKING, ALLY_SAVINGS, BOFA_CHECKING));
+        given(filterAccountsUseCase.filterAccounts(any(AccountFilterCriteria.class)))
+                .willReturn(List.of(CHASE_SAVINGS, CHASE_CHECKING));
 
         mockMvc.perform(get("/accounts").param("bankName", "chase"))
                 .andExpect(status().isOk())
                 .andExpect(view().name("accounts"))
-                .andExpect(model().attribute("filterBankName", "chase"))   // FAILS — controller does not set this yet
-                .andExpect(model().attribute("accounts", hasSize(2)));     // FAILS — unfiltered list returned
+                .andExpect(model().attribute("filterBankName", "chase"))
+                .andExpect(model().attribute("accounts", hasSize(2)));
     }
 
     // C-2: bankName="" (blank) + accountType=SAVINGS → filter by type only; filterBankName="" in model
@@ -105,16 +105,16 @@ class AccountControllerFilterTest {
     @Test
     @WithMockUser
     void getAccounts_filterAndSort_appliesFilterThenSort() throws Exception {
-        given(getAllAccountsUseCase.getAllAccounts(any(AccountSortCriteria.class)))
-                .willReturn(List.of(CHASE_SAVINGS, CHASE_CHECKING, ALLY_SAVINGS, BOFA_CHECKING));
+        given(filterAccountsUseCase.filterAccounts(any(AccountFilterCriteria.class)))
+                .willReturn(List.of(CHASE_CHECKING, CHASE_SAVINGS));
 
         mockMvc.perform(get("/accounts")
                         .param("bankName", "chase")
                         .param("sortField", "balance")
                         .param("sortDir", "asc"))
                 .andExpect(status().isOk())
-                .andExpect(model().attribute("filterBankName", "chase"))  // FAILS — not set
-                .andExpect(model().attribute("accounts", hasSize(2)));    // FAILS — unfiltered
+                .andExpect(model().attribute("filterBankName", "chase"))
+                .andExpect(model().attribute("accounts", hasSize(2)));
     }
 
     // C-5: no params → all accounts; all filter model attrs present as empty string

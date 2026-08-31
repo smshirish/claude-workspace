@@ -48,7 +48,7 @@ class AccountApplicationServiceFilterTest {
         chase        = BankAccount.create("Chase", "000111222", AccountType.SAVINGS,  new BigDecimal("500.00"), "USD");
         chaseChecking= BankAccount.create("Chase", "333444555", AccountType.CHECKING, new BigDecimal("200.00"), "USD");
         ally         = BankAccount.create("Ally",  "666777888", AccountType.SAVINGS,  new BigDecimal("800.00"), "USD");
-        bofa         = BankAccount.create("BOFA",  "999000111", AccountType.CHECKING, new BigDecimal("150.00"), "USD");
+        bofa         = BankAccount.create("BOFA",  "999888777", AccountType.CHECKING, new BigDecimal("150.00"), "USD");
     }
 
     // F-1: bankName="chase" (lowercase) → Chase accounts only

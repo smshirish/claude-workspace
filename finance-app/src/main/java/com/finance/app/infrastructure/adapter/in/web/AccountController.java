@@ -3,10 +3,12 @@ package com.finance.app.infrastructure.adapter.in.web;
 import com.finance.app.domain.exception.AccountImportException;
 import com.finance.app.domain.exception.CsvRowValidationException;
 import com.finance.app.domain.exception.CsvSchemaException;
+import com.finance.app.domain.model.AccountFilterCriteria;
 import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountSortField;
 import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.model.SortDirection;
+import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase.ImportAccountsCommand;
@@ -34,11 +36,14 @@ public class AccountController {
 
     private final ImportAccountsUseCase importAccountsUseCase;
     private final GetAllAccountsUseCase getAllAccountsUseCase;
+    private final FilterAccountsUseCase filterAccountsUseCase;
 
     public AccountController(ImportAccountsUseCase importAccountsUseCase,
-                             GetAllAccountsUseCase getAllAccountsUseCase) {
+                             GetAllAccountsUseCase getAllAccountsUseCase,
+                             FilterAccountsUseCase filterAccountsUseCase) {
         this.importAccountsUseCase = importAccountsUseCase;
         this.getAllAccountsUseCase = getAllAccountsUseCase;
+        this.filterAccountsUseCase = filterAccountsUseCase;
     }
 
     @GetMapping
@@ -64,8 +69,12 @@ public class AccountController {
             activeDir = "asc";
         }
 
-        List<BankAccount> accounts = getAllAccountsUseCase.getAllAccounts(criteria);
-        accounts = applyFilter(accounts, bankName, accountNumber, accountType);
+        List<BankAccount> accounts;
+        if (!bankName.isBlank() || !accountNumber.isBlank() || !accountType.isBlank()) {
+            accounts = filterAccountsUseCase.filterAccounts(new AccountFilterCriteria(bankName, accountNumber, accountType));
+        } else {
+            accounts = getAllAccountsUseCase.getAllAccounts(criteria);
+        }
 
         model.addAttribute("accounts", accounts);
         model.addAttribute("activeSortField", activeField);
@@ -75,15 +84,6 @@ public class AccountController {
         model.addAttribute("filterAccountType", accountType);
         model.addAttribute("clearFilterUrl", "/accounts?sortField=" + activeField + "&sortDir=" + activeDir);
         return "accounts";
-    }
-
-    private List<BankAccount> applyFilter(List<BankAccount> accounts, String bankName,
-                                           String accountNumber, String accountType) {
-        return accounts.stream()
-                .filter(a -> bankName.isBlank() || a.bankName().toLowerCase().contains(bankName.toLowerCase()))
-                .filter(a -> accountNumber.isBlank() || a.accountNumber().toLowerCase().contains(accountNumber.toLowerCase()))
-                .filter(a -> accountType.isBlank() || a.accountType().name().toLowerCase().contains(accountType.toLowerCase()))
-                .toList();
     }
 
     @PostMapping("/import")
