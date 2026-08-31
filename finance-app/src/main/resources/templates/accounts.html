@@ -78,6 +78,13 @@
         <td th:text="${account.currency()}"></td>
     </tr>
     </tbody>
+    <tfoot>
+    <tr>
+        <td colspan="3">Total</td>
+        <td class="balance-cell" th:text="${totalBalance}" data-testid="accounts-total-balance"></td>
+        <td></td>
+    </tr>
+    </tfoot>
 </table>
 </div>
 </main>
