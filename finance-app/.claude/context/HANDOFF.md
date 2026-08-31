@@ -1,5 +1,17 @@
 # Handoff
 
+## Infra Notes
+
+### settings.local.json — dropped wildcard permissions (2026-08-31)
+During rebase of `feature/B_FilterBar` onto `claude-101`, commit `d23d360 (Added tools for csv conversion)` introduced two wildcard permissions that were not carried forward (blocked by auto-classifier):
+```json
+"Bash(chmod +x *)",
+"Bash(bash *)"
+```
+These replaced the more specific `"Bash(chmod +x .../orchestrate.sh)"` entry already in HEAD. If broader chmod/bash permissions are needed for the csv-converter tooling, add them manually to `.claude/settings.local.json`.
+
+---
+
 ## Status
 Feature A (Column Sorting) — COMPLETE. Full regression verified 2026-08-30: 96/96 unit/MockMvc/integration tests pass (`mvn test`) + 40/40 E2E tests pass (`npx playwright test`, all specs: account-sort, accounts, csv-validation, nav).
 
