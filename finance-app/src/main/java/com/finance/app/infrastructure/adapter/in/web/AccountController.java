@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.math.BigDecimal;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -79,7 +80,12 @@ public class AccountController {
             accounts = getAllAccountsUseCase.getAllAccounts(criteria);
         }
 
+        BigDecimal totalBalance = accounts.stream()
+                .map(BankAccount::balance)
+                .reduce(BigDecimal.ZERO, BigDecimal::add);
+
         model.addAttribute("accounts", accounts);
+        model.addAttribute("totalBalance", totalBalance);
         model.addAttribute("activeSortField", activeField);
         model.addAttribute("activeSortDir", activeDir);
         model.addAttribute("filterBankName", bankName);

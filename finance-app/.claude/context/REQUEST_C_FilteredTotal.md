@@ -9,15 +9,15 @@ Automatic — the total is rendered with the accounts table on every page load a
 ## Happy path
 - A total row appears at the bottom of the accounts table
 - The total sums only the accounts currently displayed (filtered or unfiltered)
-- The total is displayed in bold, in a distinct color, with an icon indicating it is a total amount
 - The total value is formatted identically to the individual balance cells
 
 ## Failure / edge cases
-- No accounts match the active filter: the total row is still visible and shows `0.00`
+- No accounts match the active filter: the empty-state message is shown instead of the table, and the total row is absent along with it
 
 ## Out of scope
 - Currency conversion
 - Per-currency subtotals
+- Visual styling of the total row — no bold, no distinct color, no icon. The row uses the table's existing cell styling.
 
 Keep the implementation simple — a single summed value.
 
