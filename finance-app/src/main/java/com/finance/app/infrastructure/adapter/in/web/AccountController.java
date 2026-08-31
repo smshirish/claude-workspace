@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
 
@@ -71,7 +72,9 @@ public class AccountController {
 
         List<BankAccount> accounts;
         if (!bankName.isBlank() || !accountNumber.isBlank() || !accountType.isBlank()) {
-            accounts = filterAccountsUseCase.filterAccounts(new AccountFilterCriteria(bankName, accountNumber, accountType));
+            accounts = sortAccounts(
+                    filterAccountsUseCase.filterAccounts(new AccountFilterCriteria(bankName, accountNumber, accountType)),
+                    criteria);
         } else {
             accounts = getAllAccountsUseCase.getAllAccounts(criteria);
         }
@@ -84,6 +87,18 @@ public class AccountController {
         model.addAttribute("filterAccountType", accountType);
         model.addAttribute("clearFilterUrl", "/accounts?sortField=" + activeField + "&sortDir=" + activeDir);
         return "accounts";
+    }
+
+    private static List<BankAccount> sortAccounts(List<BankAccount> accounts, AccountSortCriteria criteria) {
+        Comparator<BankAccount> comparator = switch (criteria.field()) {
+            case BANK_NAME    -> Comparator.comparing(BankAccount::bankName);
+            case BALANCE      -> Comparator.comparing(BankAccount::balance);
+            case ACCOUNT_TYPE -> Comparator.comparing(a -> a.accountType().name());
+        };
+        if (criteria.direction() == SortDirection.DESC) {
+            comparator = comparator.reversed();
+        }
+        return accounts.stream().sorted(comparator).toList();
     }
 
     @PostMapping("/import")
