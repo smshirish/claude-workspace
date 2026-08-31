@@ -74,6 +74,10 @@ Available specs: `accounts.spec.ts`, `account-sort.spec.ts`, `account-filter.spe
 ```
 Example: `.claude/orchestration/orchestrate.sh C_FilteredTotal`
 
+### Starting a new feature
+Use the **`requirements-agent`** first — it interviews you with one question at a time and writes `pipeline/REQUEST_<FeatureName>.md`. Then run the pipeline orchestrator above.
+Do not write the REQUEST file manually unless you already have a fully formed spec.
+
 ---
 
 ## Answering Rules
@@ -88,10 +92,10 @@ Example: `.claude/orchestration/orchestrate.sh C_FilteredTotal`
 
 ## Project Feature Roadmap (from HANDOFF)
 
-| Order | Feature | Plan file | E2E spec | Status |
-|---|---|---|---|---|
-| A | Column Sorting | `PLAN_A_ColumnSorting.md` | `account-sort.spec.ts` | COMPLETE |
-| B | Filter Bar | `PLAN_B_FilterBar.md` | `account-filter.spec.ts` | COMPLETE (not yet merged to main) |
-| C | Filtered Total | `PLAN_C_FilteredTotal.md` | `account-total.spec.ts` | NOT STARTED |
+| Order | Feature | Plan file | E2E spec |
+|---|---|---|---|
+| A | Column Sorting | `PLAN_A_ColumnSorting.md` | `account-sort.spec.ts` |
+| B | Filter Bar | `PLAN_B_FilterBar.md` | `account-filter.spec.ts` |
+| C | Filtered Total | `PLAN_C_FilteredTotal.md` | `account-total.spec.ts` |
 
-Verify this table against `git log` and `HANDOFF.md` before reporting — it may be stale.
+**Always derive current status from `git log` and `HANDOFF.md` at query time — never report the status column above as fact.**
