@@ -38,7 +38,8 @@
       "Bash(echo \"started pid $!\")",
       "Bash(cd /workspaces/claude-workspace/finance-app *)",
       "Bash(git commit -m ' *)",
-      "Bash(git checkout *)"
+      "Bash(git checkout *)",
+      "Bash(grep -v \"^commit\\\\|^Author\\\\|^Date\\\\|^Merge\\\\|^$\\\\|^\\\\s\")"
     ]
   }
 }
