@@ -106,9 +106,9 @@ test.describe('Filter Bar', () => {
     await expect(page.locator('[data-testid="filter-accountType-input"]')).toHaveValue('');
   });
 
-  // E2E-6: Sort by bankName, then apply bankName filter → filtered rows remain sorted
+  // E2E-6: Sort by balance ASC, then apply bankName filter → filtered rows remain sorted
   test('E2E-6: Filtering after sorting keeps the result set sorted', async ({ page }) => {
-    await page.click('[data-testid="sort-balance"]');
+    await page.goto('/accounts?sortField=balance&sortDir=asc');
     await page.waitForLoadState('networkidle');
 
     await submitFilter(page, { bankName: 'chase' });

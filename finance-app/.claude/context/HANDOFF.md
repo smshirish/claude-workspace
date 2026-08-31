@@ -3,7 +3,7 @@
 ## Status
 Feature A (Column Sorting) — COMPLETE. Full regression verified 2026-08-30: 96/96 unit/MockMvc/integration tests pass (`mvn test`) + 40/40 E2E tests pass (`npx playwright test`, all specs: account-sort, accounts, csv-validation, nav).
 
-Feature B (Filter Bar) — **Round-4 remediation complete, 2026-08-31.** All 109 unit/MockMvc tests pass (`mvn test`). Ready for reviewer re-pass / E2E. See "Feature B — Round 4 Resolution" below.
+Feature B (Filter Bar) — **COMPLETE, 2026-08-31.** Reviewer verdict: APPROVE. 109/109 unit/MockMvc tests pass; 46/46 E2E tests pass (`npx playwright test`, all specs including new `account-filter.spec.ts`). See "Feature B — Round 4 Resolution" below.
 
 ## Feature B — Round 4 Resolution (2026-08-31)
 
@@ -13,7 +13,13 @@ Resumed from the parked state below. Fixes applied:
 - **`AccountControllerFilterTest.java`** — `C-1` and `C-4` predated the controller's switch to real `FilterAccountsUseCase` delegation; they only stubbed `getAllAccountsUseCase` and expected the controller's old local `applyFilter()` to do the filtering. Updated both to stub `filterAccountsUseCase.filterAccounts(...)` directly.
 - **`AccountApplicationServiceFilterTest.java`** (F-7) — fixture bug, not a production bug: `bofa`'s account number `"999000111"` contained the same `"000111"` substring as `chase`'s `"000111222"`, so the partial-match filter correctly returned 2 accounts against a test asserting 1. Changed `bofa`'s fixture number to `"999888777"`.
 
-**Next:** re-run reviewer-agent pass (or re-invoke `orchestrate.sh B_FilterBar` to resume from current `HEAD`), then run E2E (`account-filter.spec.ts`).
+## Feature B — Round 4b: Reviewer Pass + Sort Regression Fix + E2E (2026-08-31)
+
+Manual reviewer pass against `PLAN_B_FilterBar.md` (commit history in `.claude/context/REVIEW_B_FilterBar.md`) found round-3's both `[HIGH]` issues resolved, but surfaced a new `[HIGH]` regression: wiring `FilterAccountsUseCase` properly (the round-3 fix) meant `AccountController.showAccounts()`'s filter branch never applied the computed `AccountSortCriteria` — plan §3.5 requires "filter first → sort after." Fixed by adding a `sortAccounts()` helper in `AccountController.java` and applying it to the filtered branch's result. Re-verdict: **APPROVE**.
+
+Then wrote `e2e/tests/account-filter.spec.ts` (E2E-1 through E2E-6 per plan §5.3 — this file didn't exist yet, so it was authored fresh) and ran the full E2E suite (`mvn spring-boot:run` + `npx playwright test`): 46/46 pass, including E2E-6 (filter+sort combination) which exercises the sort-regression fix above.
+
+**Feature B is done.** Not yet merged to `main` — that's a manual step.
 
 ## Feature B — Parked State (historical — resolved above)
 
