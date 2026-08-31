@@ -3,9 +3,12 @@ package com.finance.app.infrastructure.adapter.in.web;
 import com.finance.app.domain.exception.AccountImportException;
 import com.finance.app.domain.exception.CsvRowValidationException;
 import com.finance.app.domain.exception.CsvSchemaException;
+import com.finance.app.domain.model.AccountFilterCriteria;
 import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.AccountSortField;
+import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.model.SortDirection;
+import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase.ImportAccountsCommand;
@@ -18,6 +21,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.Comparator;
+import java.util.List;
 import java.util.Map;
 
 @Controller
@@ -32,17 +37,23 @@ public class AccountController {
 
     private final ImportAccountsUseCase importAccountsUseCase;
     private final GetAllAccountsUseCase getAllAccountsUseCase;
+    private final FilterAccountsUseCase filterAccountsUseCase;
 
     public AccountController(ImportAccountsUseCase importAccountsUseCase,
-                             GetAllAccountsUseCase getAllAccountsUseCase) {
+                             GetAllAccountsUseCase getAllAccountsUseCase,
+                             FilterAccountsUseCase filterAccountsUseCase) {
         this.importAccountsUseCase = importAccountsUseCase;
         this.getAllAccountsUseCase = getAllAccountsUseCase;
+        this.filterAccountsUseCase = filterAccountsUseCase;
     }
 
     @GetMapping
     public String showAccounts(
             @RequestParam(required = false) String sortField,
             @RequestParam(required = false) String sortDir,
+            @RequestParam(required = false, defaultValue = "") String bankName,
+            @RequestParam(required = false, defaultValue = "") String accountNumber,
+            @RequestParam(required = false, defaultValue = "") String accountType,
             Model model) {
         AccountSortField field = sortField != null ? SORT_FIELD_MAP.get(sortField) : null;
         AccountSortCriteria criteria;
@@ -58,10 +69,36 @@ public class AccountController {
             activeField = "balance";
             activeDir = "asc";
         }
-        model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(criteria));
+
+        List<BankAccount> accounts;
+        if (!bankName.isBlank() || !accountNumber.isBlank() || !accountType.isBlank()) {
+            accounts = sortAccounts(
+                    filterAccountsUseCase.filterAccounts(new AccountFilterCriteria(bankName, accountNumber, accountType)),
+                    criteria);
+        } else {
+            accounts = getAllAccountsUseCase.getAllAccounts(criteria);
+        }
+
+        model.addAttribute("accounts", accounts);
         model.addAttribute("activeSortField", activeField);
         model.addAttribute("activeSortDir", activeDir);
+        model.addAttribute("filterBankName", bankName);
+        model.addAttribute("filterAccountNumber", accountNumber);
+        model.addAttribute("filterAccountType", accountType);
+        model.addAttribute("clearFilterUrl", "/accounts?sortField=" + activeField + "&sortDir=" + activeDir);
         return "accounts";
+    }
+
+    private static List<BankAccount> sortAccounts(List<BankAccount> accounts, AccountSortCriteria criteria) {
+        Comparator<BankAccount> comparator = switch (criteria.field()) {
+            case BANK_NAME    -> Comparator.comparing(BankAccount::bankName);
+            case BALANCE      -> Comparator.comparing(BankAccount::balance);
+            case ACCOUNT_TYPE -> Comparator.comparing(a -> a.accountType().name());
+        };
+        if (criteria.direction() == SortDirection.DESC) {
+            comparator = comparator.reversed();
+        }
+        return accounts.stream().sorted(comparator).toList();
     }
 
     @PostMapping("/import")

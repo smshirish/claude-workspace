@@ -35,6 +35,16 @@
     <button type="submit" class="btn-import" data-testid="accounts-import-button">Import CSV</button>
 </form>
 
+<form method="get" th:action="@{/accounts}" data-testid="filter-form" class="filter-form">
+    <input type="hidden" name="sortField" th:value="${activeSortField}"/>
+    <input type="hidden" name="sortDir" th:value="${activeSortDir}"/>
+    <input type="text" name="bankName" th:value="${filterBankName}" placeholder="Bank Name" data-testid="filter-bankName-input"/>
+    <input type="text" name="accountNumber" th:value="${filterAccountNumber}" placeholder="Account Number" data-testid="filter-accountNumber-input"/>
+    <input type="text" name="accountType" th:value="${filterAccountType}" placeholder="Account Type" data-testid="filter-accountType-input"/>
+    <button type="submit" data-testid="filter-submit-button">Filter</button>
+    <a th:href="${clearFilterUrl}" data-testid="filter-clear-link">Clear</a>
+</form>
+
 <div th:if="${#lists.isEmpty(accounts)}" class="empty-state" data-testid="accounts-empty-state">
     <p>No accounts imported yet. Upload a CSV file to get started.</p>
 </div>

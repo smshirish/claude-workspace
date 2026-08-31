@@ -1,7 +1,50 @@
 # Handoff
 
 ## Status
-Feature A (Column Sorting) — COMPLETE. 9/9 unit/MockMvc tests pass + 8/8 E2E tests pass (verified 2026-07-09). Ready to start Feature B (Filter Bar).
+Feature A (Column Sorting) — COMPLETE. Full regression verified 2026-08-30: 96/96 unit/MockMvc/integration tests pass (`mvn test`) + 40/40 E2E tests pass (`npx playwright test`, all specs: account-sort, accounts, csv-validation, nav).
+
+Feature B (Filter Bar) — **COMPLETE, 2026-08-31.** Reviewer verdict: APPROVE. 109/109 unit/MockMvc tests pass; 46/46 E2E tests pass (`npx playwright test`, all specs including new `account-filter.spec.ts`). See "Feature B — Round 4 Resolution" below.
+
+## Feature B — Round 4 Resolution (2026-08-31)
+
+Resumed from the parked state below. Fixes applied:
+
+- **`AccountBeanConfig.java`** — replaced the single `accountApplicationService` bean (which caused duplicate-bean errors when paired with per-interface wrapper beans) with three independent `@Bean` methods — `importAccountsUseCase()`, `getAllAccountsUseCase()`, `filterAccountsUseCase()` — each constructing its own `AccountApplicationService` (stateless, so this is safe). This lets `@MockBean` swap one port at a time in older test classes without removing the others from the context.
+- **`AccountControllerFilterTest.java`** — `C-1` and `C-4` predated the controller's switch to real `FilterAccountsUseCase` delegation; they only stubbed `getAllAccountsUseCase` and expected the controller's old local `applyFilter()` to do the filtering. Updated both to stub `filterAccountsUseCase.filterAccounts(...)` directly.
+- **`AccountApplicationServiceFilterTest.java`** (F-7) — fixture bug, not a production bug: `bofa`'s account number `"999000111"` contained the same `"000111"` substring as `chase`'s `"000111222"`, so the partial-match filter correctly returned 2 accounts against a test asserting 1. Changed `bofa`'s fixture number to `"999888777"`.
+
+## Feature B — Round 4b: Reviewer Pass + Sort Regression Fix + E2E (2026-08-31)
+
+Manual reviewer pass against `PLAN_B_FilterBar.md` (commit history in `.claude/context/REVIEW_B_FilterBar.md`) found round-3's both `[HIGH]` issues resolved, but surfaced a new `[HIGH]` regression: wiring `FilterAccountsUseCase` properly (the round-3 fix) meant `AccountController.showAccounts()`'s filter branch never applied the computed `AccountSortCriteria` — plan §3.5 requires "filter first → sort after." Fixed by adding a `sortAccounts()` helper in `AccountController.java` and applying it to the filtered branch's result. Re-verdict: **APPROVE**.
+
+Then wrote `e2e/tests/account-filter.spec.ts` (E2E-1 through E2E-6 per plan §5.3 — this file didn't exist yet, so it was authored fresh) and ran the full E2E suite (`mvn spring-boot:run` + `npx playwright test`): 46/46 pass, including E2E-6 (filter+sort combination) which exercises the sort-regression fix above.
+
+**Feature B is done.** Not yet merged to `main` — that's a manual step.
+
+## Feature B — Parked State (historical — resolved above)
+
+`orchestrate.sh B_FilterBar` ran to completion of its reviewer loop and **escalated to human** after round 3 (`MAX_ATTEMPTS=3`, `pipeline/WORKFLOW_STATE.json` shows `stage:reviewer, attempt:3`). Verdict: `.claude/context/REVIEW_B_FilterBar.md` — same 2 blocking `[HIGH]` issues persisted across rounds 1–3:
+1. `FilterAccountsUseCase` dead code — controller never calls it, uses a private `applyFilter()` instead.
+2. Leftover `src/test/java` stub classes (`AccountFilterCriteria`, `FilterAccountsUseCase`) shadowing the real `src/main/java` versions on the test classpath.
+
+Per user request, the round-4 test-first remediation flow was run **manually** (not via `orchestrate.sh`, which doesn't auto-resume after an `exit 2` escalation):
+
+- **unit-test-agent — DONE, committed** (`e2f6b74`, branch `feature/B_FilterBar`): deleted both stale stubs; added MockMvc test `C-6` to `AccountControllerFilterTest.java` asserting the controller actually invokes `filterAccountsUseCase.filterAccounts()`. Also surfaced a **new, previously-unflagged pre-existing failure `F-7`** (`filterAccounts_byPartialAccountNumber_returnsMatchingAccounts`) — not yet investigated.
+- **dev-agent — INTERRUPTED, stopped by user request, changes UNCOMMITTED** in the working tree:
+  - `AccountController.java` — wiring `FilterAccountsUseCase` into the controller, removing `applyFilter()`. This part looks correct and compiles clean.
+  - `AccountBeanConfig.java` — **broken.** Added three new `@Bean` methods (`importAccountsUseCase()`, `getAllAccountsUseCase()`, `filterAccountsUseCase()`) that each wrap the same `AccountApplicationService`. Since `AccountApplicationService` already implements all three port interfaces via its single existing `accountApplicationService` bean, this creates duplicate bean definitions. Result: every MockMvc controller test now fails ApplicationContext startup with `IllegalStateException: Unable to register mock bean ... expected a single matching bean to replace but found [accountApplicationService, importAccountsUseCase]` (18 test errors across `AccountControllerTest`, `AccountControllerSortTest`, `AccountControllerFilterTest`).
+
+### Next steps to resume
+1. In `AccountBeanConfig.java`, remove the redundant new `@Bean` methods (or the original `accountApplicationService` bean method) so each port interface resolves to exactly one bean.
+2. Run `mvn test`, confirm all pass including new `C-6`.
+3. Investigate pre-existing `F-7` failure (untouched, unrelated to the filter-bar wiring fix).
+4. Commit as `fix: address review feedback for B_FilterBar (round 4)` (mirrors the pipeline's own commit message pattern).
+5. Either manually re-run a reviewer-agent pass, or re-invoke `orchestrate.sh B_FilterBar` to resume the automated pipeline (it will start a new reviewer round from current `HEAD`).
+
+### Orchestrator infra changes (already committed, both `claude-101` and `feature/B_FilterBar`)
+- `orchestrate.sh`: per-call cost/timing log (`log_cost()` → `.claude/context/COST_<Feature>.md`), reviewer loop restructured to test-first (`unit-test-agent` encodes findings as tests before `dev-agent` fixes them).
+- `.claude/rules/reviewer.md`: severity-gate verdict rule — `REQUEST_CHANGES` only for `[CRITICAL]`/`[HIGH]`; `[MEDIUM]`/`[MINOR]` go to non-blocking `### Suggestions`.
+- `.claude/context/COST_B_FilterBar.md`: partial backfill for this run (pre-fix calls were overwritten before `log_cost()` existed) — documents the gap; future runs populate it completely per-call.
 
 ### Completed
 - **Feature A — Implementation done** (2026-06-22)

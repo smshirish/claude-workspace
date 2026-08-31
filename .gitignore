@@ -1,5 +1,9 @@
 finance-app/target/
+finance-app/tools/csv-converter/target/
 finance-app/e2e/node_modules/
 finance-app/e2e/test-results/
 finance-app/e2e/playwright-report/
-    
+finance-app/tools/csv-converter/sample/accounts.xlsx
+finance-app/tools/csv-converter/sample/accounts_converted.csv
+finance-app/tools/csv-converter/sample/accounts.csv
+finance-app/pipeline/

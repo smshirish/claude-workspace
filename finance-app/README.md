@@ -28,6 +28,7 @@ The app is intentionally simple in infrastructure so it can run anywhere with no
 | **[docs/architecture.md](docs/architecture.md)** | Technical design: layers, patterns, package structure, key decisions | Architecture changes |
 | **[docs/projectplan.md](docs/projectplan.md)** | Feature backlog: what is built, what is next, known technical debt | Features ship or priorities change |
 | **[docs/ai-workflow.md](docs/ai-workflow.md)** | How AI-assisted development works: agents, context files, conventions | Workflow evolves |
+| **[docs/agentic-workflow.md](docs/agentic-workflow.md)** | Automated Spec→Test→Dev→Review→E2E pipeline: roles, enforcement mechanism, coordination contract | Pipeline roles, scopes, or retry policy change |
 | **[ai/prompts/](ai/prompts/)** | Reusable prompt scripts for agent sessions (copy-paste reference) | New prompts added per feature |
 | **[ai/completed-plans/](ai/completed-plans/)** | Archived PLAN files for shipped features | Each time a feature ships |
 | **[.claude/context/](.claude/context/)** | Live agent context: active PLAN, HANDOFF status, plan template | Every agent session |

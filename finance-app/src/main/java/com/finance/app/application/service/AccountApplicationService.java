@@ -4,6 +4,8 @@ import com.finance.app.domain.exception.AccountImportException;
 import com.finance.app.domain.model.AccountSortCriteria;
 import com.finance.app.domain.model.BankAccount;
 import com.finance.app.domain.model.SortDirection;
+import com.finance.app.domain.model.AccountFilterCriteria;
+import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.out.AccountFileParser;
@@ -13,7 +15,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.Objects;
 
-public class AccountApplicationService implements ImportAccountsUseCase, GetAllAccountsUseCase {
+public class AccountApplicationService implements ImportAccountsUseCase, GetAllAccountsUseCase, FilterAccountsUseCase {
 
     private final AccountFileParser parser;
     private final AccountRepository repository;
@@ -46,5 +48,19 @@ public class AccountApplicationService implements ImportAccountsUseCase, GetAllA
             comparator = comparator.reversed();
         }
         return accounts.stream().sorted(comparator).toList();
+    }
+
+    @Override
+    public List<BankAccount> filterAccounts(AccountFilterCriteria criteria) {
+        return repository.findAll().stream()
+                .filter(a -> matches(a.bankName(), criteria.bankName()))
+                .filter(a -> matches(a.accountNumber(), criteria.accountNumber()))
+                .filter(a -> matches(a.accountType().name(), criteria.accountType()))
+                .toList();
+    }
+
+    private boolean matches(String value, String filter) {
+        return filter == null || filter.isBlank() ||
+                value.toLowerCase().contains(filter.toLowerCase());
     }
 }

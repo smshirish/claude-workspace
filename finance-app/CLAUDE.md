@@ -34,3 +34,9 @@
 - Feature plan: @.claude/context/PLAN.md — active plan for the current iteration; overwritten per feature.
 - Plan template: @.claude/context/PLAN_template.md — read this before generating a new PLAN.md; never modify.
 - Handoff status: @.claude/context/HANDOFF.md
+
+## Agentic Pipeline (Spec -> Test -> Dev -> Review -> E2E)
+- Driver: `.claude/orchestration/orchestrate.sh <FeatureName>` — runs each stage as a separate headless `claude -p` process with its own `.claude/orchestration/settings/*.json` (write-scope enforced via `permissions.deny`, not prompt convention).
+- Roles: Spec Agent (`.claude/rules/spec.md`) -> Unit Test Agent (`.claude/rules/testing.md`) -> Dev Agent (`.claude/rules/dev.md`, retries up to 3x against failing tests) -> Reviewer (`.claude/rules/reviewer.md`, read-only rubber duck, up to 3 request-changes rounds) -> E2E Agent (`.claude/rules/e2e.md`).
+- State: `pipeline/WORKFLOW_STATE.json` (current stage/attempt, orchestrator-owned, gitignored), `pipeline/RESULT.json` (last stage's pass/fail, gitignored) — both live outside `.claude/` because that directory is a hardcoded-protected path headless agents can never write into. `.claude/context/REVIEW_<Feature>.md` (reviewer's verdict, committed) is populated by the orchestrator copying the agent's draft, not written directly by the agent.
+- Git: orchestrator commits per stage on `feature/<Feature>`. It never pushes or merges — that's a manual step after the pipeline reports done.

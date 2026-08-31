@@ -1,0 +1,7 @@
+{
+  "bank":          "bankName",
+  "acc_no":       "accountNumber",
+  "account_purpose": "accountType",
+  "amount_chf":        "balance",
+  "account_currency":          "currency"
+}

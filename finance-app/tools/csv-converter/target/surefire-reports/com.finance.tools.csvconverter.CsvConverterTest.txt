@@ -1,0 +1,4 @@
+-------------------------------------------------------------------------------
+Test set: com.finance.tools.csvconverter.CsvConverterTest
+-------------------------------------------------------------------------------
+Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.412 s -- in com.finance.tools.csvconverter.CsvConverterTest
