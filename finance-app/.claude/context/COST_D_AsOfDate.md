@@ -11,3 +11,4 @@
 | reviewer-agent | 2 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 249298 | 24 | 11718 | 1321956 | 0.83494605 |
 | unit-test-agent | 2 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 287289 | 19 | 10941 | 836104 | 0.6288636999999999 |
 | dev-agent | 2 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 515335 | 41 | 22220 | 2542073 | 1.3870091499999997 |
+| reviewer-agent | 3 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 194083 | 22 | 9405 | 1068721 | 0.6848633 |
