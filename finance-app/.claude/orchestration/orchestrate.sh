@@ -3,6 +3,14 @@
 # Each stage runs as a separate headless `claude -p` process with its own
 # settings.deny scope, so guardrails are enforced by the permission system,
 # not by prompt convention.
+#
+# Usage: orchestrate.sh <FeatureName> [--force|-f]
+# Before each stage, WORKFLOW_STATE.json (if present) is checked to confirm
+# this feature/branch is at or just before that stage — this catches stale
+# state left over from an escalated run (exit 2) or a state file for a
+# different feature. --force/-f skips that check, for deliberately re-running
+# or skipping ahead to a single stage (e.g. resuming manually after fixing an
+# issue outside the stages the automated retry loop can reach).
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -20,7 +28,15 @@ STATE_FILE="$PIPELINE/WORKFLOW_STATE.json"
 RESULT_FILE="$PIPELINE/RESULT.json"
 MAX_ATTEMPTS=3
 
-FEATURE="${1:?Usage: orchestrate.sh <FeatureName>}"
+FORCE=0
+ARGS=()
+for arg in "$@"; do
+  case "$arg" in
+    --force|-f) FORCE=1 ;;
+    *) ARGS+=("$arg") ;;
+  esac
+done
+FEATURE="${ARGS[0]:?Usage: orchestrate.sh <FeatureName> [--force]}"
 PLAN_FILE="$CTX/PLAN_${FEATURE}.md"
 REVIEW_FILE="$CTX/REVIEW_${FEATURE}.md"
 DRAFT_PLAN_FILE="$PIPELINE/PLAN_${FEATURE}.md"
@@ -32,6 +48,59 @@ log() { printf '[orchestrator] %s\n' "$*"; }
 write_state() {
   jq -n --arg f "$FEATURE" --arg s "$1" --argjson a "${2:-0}" --arg b "$BRANCH" \
     '{feature:$f, stage:$s, attempt:$a, max_attempts:'"$MAX_ATTEMPTS"', branch:$b}' > "$STATE_FILE"
+}
+
+# Canonical pipeline order, used to validate WORKFLOW_STATE.json before each
+# stage actually runs, so a stale/foreign state file can't cause a stage to
+# silently redo already-completed work or skip required prior work.
+STAGE_ORDER=(spec unit_test dev reviewer e2e done)
+stage_index() {
+  local s="$1" i
+  for i in "${!STAGE_ORDER[@]}"; do
+    [[ "${STAGE_ORDER[$i]}" == "$s" ]] && { echo "$i"; return 0; }
+  done
+  echo "-1"
+}
+
+# Verify WORKFLOW_STATE.json (if present) agrees this feature/branch is at or
+# just before the stage we're about to run. --force / -f bypasses this check
+# entirely, for deliberately re-running or skipping ahead to a single stage.
+assert_checkpoint() {
+  local expected="$1"
+  if (( FORCE )); then
+    log "checkpoint: --force given, skipping state validation for stage '$expected'"
+    return 0
+  fi
+  [[ -f "$STATE_FILE" ]] || return 0
+
+  local state_feature state_branch state_stage
+  state_feature=$(jq -r '.feature // empty' "$STATE_FILE")
+  state_branch=$(jq -r '.branch // empty' "$STATE_FILE")
+  state_stage=$(jq -r '.stage // empty' "$STATE_FILE")
+
+  if [[ -n "$state_feature" && "$state_feature" != "$FEATURE" ]]; then
+    log "ERROR: $STATE_FILE belongs to feature '$state_feature', not '$FEATURE'. Refusing to run stage '$expected'. Re-run with --force to override."
+    exit 3
+  fi
+  if [[ -n "$state_branch" && "$state_branch" != "$BRANCH" ]]; then
+    log "ERROR: $STATE_FILE recorded branch '$state_branch', not '$BRANCH'. Refusing to run stage '$expected'. Re-run with --force to override."
+    exit 3
+  fi
+
+  local cur_idx exp_idx
+  cur_idx=$(stage_index "$state_stage")
+  exp_idx=$(stage_index "$expected")
+  if (( cur_idx == -1 || exp_idx == -1 )); then
+    return 0
+  fi
+  if (( cur_idx > exp_idx )); then
+    log "ERROR: $STATE_FILE shows stage '$state_stage', which is past '$expected'. Refusing to re-run an earlier stage after a later one already ran. Re-run with --force to override."
+    exit 3
+  fi
+  if (( cur_idx < exp_idx - 1 )); then
+    log "ERROR: $STATE_FILE shows stage '$state_stage', which is more than one stage behind '$expected'. Refusing to skip required intermediate stage(s). Re-run with --force to override."
+    exit 3
+  fi
 }
 
 commit_stage() {
@@ -105,6 +174,7 @@ if [[ ! -f "$PLAN_FILE" ]]; then
     log "Write the feature requirements in plain English to $REQUEST_FILE, then re-run."
     exit 1
   fi
+  assert_checkpoint "spec"
   write_state "spec"
   spec_prompt=$(cat <<EOF
 Follow .claude/rules/spec.md. Feature: $FEATURE.
@@ -125,6 +195,7 @@ else
 fi
 
 # --- Unit Test (write failing tests) ---
+assert_checkpoint "unit_test"
 write_state "unit_test"
 run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $PLAN_FILE section 4 (Test Scenarios).
 Write unit/MockMvc tests for feature $FEATURE, expected to fail (no production code exists yet).
@@ -134,6 +205,7 @@ Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summar
 commit_stage "test: add failing tests for $FEATURE"
 
 # --- Dev (retry loop) ---
+assert_checkpoint "dev"
 attempt=0
 feedback=""
 while true; do
@@ -156,6 +228,7 @@ Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"
 done
 
 # --- Reviewer (retry loop: REQUEST_CHANGES -> encode as tests -> Dev fixes) ---
+assert_checkpoint "reviewer"
 round=0
 while true; do
   round=$((round + 1))
@@ -186,6 +259,7 @@ Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"
 done
 
 # --- E2E ---
+assert_checkpoint "e2e"
 write_state "e2e"
 run_agent "e2e-agent" "Follow .claude/rules/e2e.md. Read $PLAN_FILE section 5.
 Start the backend (mvn spring-boot:run, background) if not already running, then write/run Playwright specs for $FEATURE.
