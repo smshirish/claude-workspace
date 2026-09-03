@@ -1,8 +1,8 @@
 -------------------------------------------------------------------------------
 Test set: com.finance.tools.csvconverter.CsvConverterTest
 -------------------------------------------------------------------------------
-Tests run: 8, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.419 s <<< FAILURE! -- in com.finance.tools.csvconverter.CsvConverterTest
-com.finance.tools.csvconverter.CsvConverterTest.throwsCsvConversionExceptionForUnparseableDateCellWithColumnValueAndRowInMessage -- Time elapsed: 0.024 s <<< ERROR!
+Tests run: 8, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.553 s <<< FAILURE! -- in com.finance.tools.csvconverter.CsvConverterTest
+com.finance.tools.csvconverter.CsvConverterTest.throwsCsvConversionExceptionForUnparseableDateCellWithColumnValueAndRowInMessage -- Time elapsed: 0.039 s <<< ERROR!
 java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescriptor
 	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
 	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
@@ -15,7 +15,7 @@ java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescripto
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
 
-com.finance.tools.csvconverter.CsvConverterTest.convertsDateTransformColumnUsingDeclaredPattern -- Time elapsed: 0.013 s <<< ERROR!
+com.finance.tools.csvconverter.CsvConverterTest.convertsDateTransformColumnUsingDeclaredPattern -- Time elapsed: 0.036 s <<< ERROR!
 java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescriptor
 	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
 	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
