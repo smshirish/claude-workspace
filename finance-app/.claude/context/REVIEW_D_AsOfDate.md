@@ -1,37 +1,32 @@
 ## Verdict: REQUEST_CHANGES
 
-Reviewed `git diff main...feature/D_AsOfDate` against `PLAN_D_AsOfDate.md`.
+Reviewed `git diff main...feature/D_AsOfDate` against `PLAN_D_AsOfDate.md` (round 2).
 
-FR-1 (BankAccount + persistence), FR-2 (validation), and FR-3 (UI column) are correctly implemented and match the plan.
-FR-4 (csv-converter tool) is **not implemented**, and the E2E layer has two blocking gaps.
+FR-1 (BankAccount + persistence), FR-2 (schema/row validation + parser), FR-3 (UI column), and FR-4 (csv-converter tool — `ColumnDescriptor`, `CsvConverter` overload, `Main.java`, `sample/mapping.json`) are all correctly implemented and match the plan. Two blocking E2E gaps remain.
 
 ---
 
 ### Blocking Issues
 
-- **[CRITICAL] `ColumnDescriptor` record not created** (`tools/csv-converter/src/main/java/com/finance/tools/csvconverter/ColumnDescriptor.java`)
-  `CsvConverter.java` in the diff contains only the old `Map<String, String>` overload. There is no `ColumnDescriptor` class, no `convertInternal` helper, and no `LinkedHashMap<String, ColumnDescriptor>` overload. Tests T-7 and T-8 in `CsvConverterTest.java` use reflection to find `ColumnDescriptor` and both fail with `java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescriptor` (confirmed in the committed surefire report under `target/`). Violates FR-4, AC-8, AC-9.
+- **[HIGH] `e2e/tests/account-asofdate.spec.ts` is missing entirely.**
+  Plan §5.1 requires this new file; §5.3 specifies E2E-1 through E2E-6 covering FR-2 import validation (blank date, non-ISO date, future date, schema error) and FR-3 display (As Of Date column visible, tfoot column count). The file does not exist in `e2e/tests/` — the directory contains only `account-filter.spec.ts`, `account-sort.spec.ts`, `account-total.spec.ts`, `accounts.spec.ts`, `csv-validation.spec.ts`, `helpers/`, and `nav.spec.ts`. AC-1 through AC-6 have no E2E coverage at all.
 
-- **[CRITICAL] `Main.java` not updated for date transforms** (`tools/csv-converter/src/main/java/com/finance/tools/csvconverter/Main.java`)
-  Still reads `mapping.json` as `Map<String, String>` and calls the old `convert()` overload. Map-typed entries (the `as_of_date` date-transform entry) cannot be deserialized or processed. Violates FR-4 §3.6.
+- **[HIGH] All existing E2E fixture strings still use 5-column headers — every import-based E2E test will fail against the new schema validator.**
+  Plan §5.4 explicitly lists every fixture that must gain `,asOfDate` in its header and a valid past ISO date on every data row. None of those updates were made:
+  - `e2e/tests/helpers/csvFixtures.ts` — all exported constants (`VALID_CSV`, `HEADER_ONLY_CSV`, `EXTRA_COLUMN_CSV`, `BAD_ACCOUNT_TYPE_ROW1_CSV`, `BLANK_BANK_NAME_ROW2_CSV`, `BAD_BALANCE_ROW1_CSV`, `MULTI_ROW_ERRORS_CSV`, `MIXED_VALID_INVALID_CSV`) still have `bankName,accountNumber,accountType,balance,currency` (5 columns).
+  - `e2e/tests/account-sort.spec.ts:40` — inline fixture still 5-column.
+  - `e2e/tests/account-filter.spec.ts:45` — inline fixture still 5-column.
+  - `e2e/tests/account-total.spec.ts:42` — inline fixture still 5-column.
+  - `e2e/tests/accounts.spec.ts:20,27,31,34` — inline fixtures still 5-column.
 
-- **[CRITICAL] `sample/mapping.json` not updated** (`tools/csv-converter/sample/mapping.json`)
-  Still has 5 columns with plain string values only; the `asOfDate` date-transform entry (`{ "to": "asOfDate", "type": "date", "from": "dd-MMM-yy" }`) specified in the plan is absent. Violates FR-4.
-
-- **[CRITICAL] `e2e/tests/account-asofdate.spec.ts` not written**
-  Plan §5.1 defines a new E2E spec file covering E2E-1 through E2E-6 (valid import, schema error, blank date, non-ISO date, future date, tfoot column count). The file does not appear in the diff at all. Violates §5.3.
-
-- **[CRITICAL] Existing E2E test fixtures not updated with `asOfDate` column** — plan §5.4 requires every shared and inline CSV fixture to gain a 6th column. None of the following were updated:
-  - `e2e/tests/helpers/csvFixtures.ts` — all 11 constants still use 5-column headers (e.g. `VALID_CSV`, `EXTRA_COLUMN_CSV`, `MISSING_COLUMN_CSV`, etc.)
-  - `e2e/tests/account-filter.spec.ts:4894` — `FILTER_FIXTURE_CSV` has 5-column header; importing it will now throw `CsvSchemaException` (schema requires 6 columns), breaking all 6 filter E2E tests.
-  - `e2e/tests/account-sort.spec.ts:5017` — `SORT_FIXTURE_CSV` has 5-column header; same breakage for all 8 sort E2E tests.
-  - `e2e/tests/accounts.spec.ts:5276` — `VALID_CSV`, `VALID_CSV_2`, `HEADER_ONLY_CSV`, `BAD_ACCOUNT_TYPE_CSV` all use 5-column headers.
-  - `e2e/tests/csv-validation.spec.ts` — inline CSVs and `csvFixtures.ts` references likewise unupdated.
+  `AccountCsvSchemaValidator.EXPECTED_COLUMNS` now requires 6 columns including `asOfDate`. Any 5-column import CSV throws `CsvSchemaException`. Every previously-green E2E test that imports CSV data (`account-sort`, `account-filter`, `account-total`, happy-path and row-error rows of `accounts` and `csv-validation`) will fail with an unexpected schema error banner.
 
 ---
 
 ### Suggestions (non-blocking)
 
-- **[MINOR]** The comment in `AccountCsvRowValidator.java:6819` still reads `"// Mandatory blank checks for all 5 columns"` — should say 6.
+- **[MINOR] `CsvFileAccountRepositoryTest` T5.6 and T5.7 use reflection to call `asOfDate()`** (`BankAccount.class.getDeclaredMethod("asOfDate")`) even though the method is now public and directly callable. The reflection was a test-agent workaround written before the implementation existed. The tests pass as-is, but `loaded.get(0).asOfDate()` is cleaner.
 
-- **[MINOR]** `CsvConverterTest` T-7/T-8 use reflection instead of a direct type reference because `ColumnDescriptor` didn't exist when the test was written. Once `ColumnDescriptor` is implemented, these tests should be rewritten to call the API directly for readability.
+- **[MINOR] `CsvConverterTest` T-7 and T-8 use reflection to invoke `ColumnDescriptor` and `convert(LinkedHashMap<ColumnDescriptor>)`** for the same reason. Since both are now implemented and the test lives in the same package as the package-private `ColumnDescriptor` record, direct calls would be cleaner. Functionally correct as written.
+
+- **[MINOR] R-10 comment says `"2026-08-31"` is "today per system clock on 2026-08-31"** but the project date is 2026-09-03 — the test actually validates a past date, not today's boundary. The assertion still passes (past dates are valid), but the intent is misleading. A fixed `Clock` would make the today-boundary test meaningful.
