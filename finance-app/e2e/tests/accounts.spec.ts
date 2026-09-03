@@ -17,22 +17,22 @@ function writeTempCsv(content: string): string {
 }
 
 const VALID_CSV = [
-  'bankName,accountNumber,accountType,balance,currency',
-  'Chase,000111222,CHECKING,1500.00,USD',
-  'Wells Fargo,333444555,SAVINGS,8200.50,USD',
-  'Citi,666777888,CREDIT,-350.00,USD',
+  'bankName,accountNumber,accountType,balance,currency,asOfDate',
+  'Chase,000111222,CHECKING,1500.00,USD,2026-08-31',
+  'Wells Fargo,333444555,SAVINGS,8200.50,USD,2026-08-31',
+  'Citi,666777888,CREDIT,-350.00,USD,2026-08-31',
 ].join('\n');
 
 const VALID_CSV_2 = [
-  'bankName,accountNumber,accountType,balance,currency',
-  'Bank of America,999000111,INVESTMENT,42000.00,USD',
+  'bankName,accountNumber,accountType,balance,currency,asOfDate',
+  'Bank of America,999000111,INVESTMENT,42000.00,USD,2026-08-31',
 ].join('\n');
 
-const HEADER_ONLY_CSV = 'bankName,accountNumber,accountType,balance,currency\n';
+const HEADER_ONLY_CSV = 'bankName,accountNumber,accountType,balance,currency,asOfDate\n';
 
 const BAD_ACCOUNT_TYPE_CSV = [
-  'bankName,accountNumber,accountType,balance,currency',
-  'Chase,000111222,MORTGAGE,1500.00,USD',
+  'bankName,accountNumber,accountType,balance,currency,asOfDate',
+  'Chase,000111222,MORTGAGE,1500.00,USD,2026-08-31',
 ].join('\n');
 
 /**
