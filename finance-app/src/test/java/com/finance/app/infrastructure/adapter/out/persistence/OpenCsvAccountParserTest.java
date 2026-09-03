@@ -16,14 +16,14 @@ class OpenCsvAccountParserTest {
 
     private final OpenCsvAccountParser sut = new OpenCsvAccountParser();
 
-    // T4.1 (update): add asOfDate column — valid CSV returns three BankAccounts
+    // T4.1 (update): add asOfDate column — valid CSV returns three BankAccounts with correct asOfDate
     @Test
-    void parse_validCsv_returnsThreeBankAccounts() {
+    void parse_validCsv_returnsThreeBankAccountsWithCorrectAsOfDate() {
         var csv = """
                 bankName,accountNumber,accountType,balance,currency,asOfDate
                 ING,NL91ABNA0417164300,CHECKING,1500.00,EUR,2026-01-15
-                Rabobank,NL20INGB0001234567,SAVINGS,250.75,EUR,2026-01-15
-                ABN AMRO,NL02ABNA0123456789,INVESTMENT,9999.99,USD,2026-01-15
+                Rabobank,NL20INGB0001234567,SAVINGS,250.75,EUR,2026-08-31
+                ABN AMRO,NL02ABNA0123456789,INVESTMENT,9999.99,USD,2020-06-01
                 """;
 
         var result = sut.parse(toStream(csv), "test.csv");
@@ -32,8 +32,11 @@ class OpenCsvAccountParserTest {
         assertThat(result.get(0).bankName()).isEqualTo("ING");
         assertThat(result.get(0).accountNumber()).isEqualTo("NL91ABNA0417164300");
         assertThat(result.get(0).accountType()).isEqualTo(AccountType.CHECKING);
+        assertThat(result.get(0).asOfDate()).isEqualTo(java.time.LocalDate.of(2026, 1, 15));
         assertThat(result.get(1).bankName()).isEqualTo("Rabobank");
+        assertThat(result.get(1).asOfDate()).isEqualTo(java.time.LocalDate.of(2026, 8, 31));
         assertThat(result.get(2).bankName()).isEqualTo("ABN AMRO");
+        assertThat(result.get(2).asOfDate()).isEqualTo(java.time.LocalDate.of(2020, 6, 1));
     }
 
     // T4.2 (update): add asOfDate column — unknown accountType throws AccountImportException

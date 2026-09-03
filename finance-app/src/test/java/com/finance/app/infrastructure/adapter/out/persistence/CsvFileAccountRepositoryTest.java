@@ -61,6 +61,7 @@ class CsvFileAccountRepositoryTest {
         assertThat(loaded0.balance()).isEqualByComparingTo("9999.99");
         assertThat(loaded0.currency()).isEqualTo("USD");
         assertThat(loaded0.importedAt()).isNotNull();
+        assertThat(loaded0.asOfDate()).isNull();
     }
 
     // T5.3
