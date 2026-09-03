@@ -1,4 +1,30 @@
 -------------------------------------------------------------------------------
 Test set: com.finance.tools.csvconverter.CsvConverterTest
 -------------------------------------------------------------------------------
-Tests run: 6, Failures: 0, Errors: 0, Skipped: 0, Time elapsed: 0.412 s -- in com.finance.tools.csvconverter.CsvConverterTest
+Tests run: 8, Failures: 0, Errors: 2, Skipped: 0, Time elapsed: 0.419 s <<< FAILURE! -- in com.finance.tools.csvconverter.CsvConverterTest
+com.finance.tools.csvconverter.CsvConverterTest.throwsCsvConversionExceptionForUnparseableDateCellWithColumnValueAndRowInMessage -- Time elapsed: 0.024 s <<< ERROR!
+java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescriptor
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:423)
+	at java.base/java.lang.Class.forName(Class.java:414)
+	at com.finance.tools.csvconverter.CsvConverterTest.throwsCsvConversionExceptionForUnparseableDateCellWithColumnValueAndRowInMessage(CsvConverterTest.java:147)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+
+com.finance.tools.csvconverter.CsvConverterTest.convertsDateTransformColumnUsingDeclaredPattern -- Time elapsed: 0.013 s <<< ERROR!
+java.lang.ClassNotFoundException: com.finance.tools.csvconverter.ColumnDescriptor
+	at java.base/jdk.internal.loader.BuiltinClassLoader.loadClass(BuiltinClassLoader.java:641)
+	at java.base/jdk.internal.loader.ClassLoaders$AppClassLoader.loadClass(ClassLoaders.java:188)
+	at java.base/java.lang.ClassLoader.loadClass(ClassLoader.java:526)
+	at java.base/java.lang.Class.forName0(Native Method)
+	at java.base/java.lang.Class.forName(Class.java:423)
+	at java.base/java.lang.Class.forName(Class.java:414)
+	at com.finance.tools.csvconverter.CsvConverterTest.convertsDateTransformColumnUsingDeclaredPattern(CsvConverterTest.java:120)
+	at java.base/java.lang.reflect.Method.invoke(Method.java:580)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+	at java.base/java.util.ArrayList.forEach(ArrayList.java:1596)
+

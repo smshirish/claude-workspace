@@ -6,9 +6,11 @@ import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.io.TempDir;
 
+import java.lang.reflect.Method;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.*;
@@ -94,5 +96,41 @@ class CsvFileAccountRepositoryTest {
         ));
 
         assertThat(Files.exists(Path.of(nestedPath))).isTrue();
+    }
+
+    // T5.6 (new): 8-column CSV with asOfDate → findAll() returns account with matching asOfDate
+    @Test
+    void findAll_accountWithAsOfDate_roundTripsAsOfDate() throws Exception {
+        // Fails here with NoSuchMethodException until BankAccount.asOfDate() is implemented
+        Method asOfDateMethod = BankAccount.class.getDeclaredMethod("asOfDate");
+
+        LocalDate expectedDate = LocalDate.of(2026, 8, 31);
+        // 6-arg BankAccount.create() not yet implemented; write CSV directly
+        Files.writeString(tempDir.resolve("accounts.csv"),
+            "accountId,bankName,accountNumber,accountType,balance,currency,importedAt,asOfDate\n" +
+            "00000000-0000-0000-0000-000000000001,ING,ACC1,CHECKING,100.00,EUR,2026-09-03T10:00:00," + expectedDate + "\n");
+
+        var loaded = sut.findAll();
+
+        assertThat(loaded).hasSize(1);
+        LocalDate actual = (LocalDate) asOfDateMethod.invoke(loaded.get(0));
+        assertThat(actual).isEqualTo(expectedDate);
+    }
+
+    // T5.7 (new): legacy 7-column CSV (no asOfDate column) → findAll() returns account with asOfDate == null
+    @Test
+    void findAll_legacySevenColumnCsv_returnsAccountWithNullAsOfDate() throws Exception {
+        // Fails here with NoSuchMethodException until BankAccount.asOfDate() is implemented
+        Method asOfDateMethod = BankAccount.class.getDeclaredMethod("asOfDate");
+
+        Files.writeString(tempDir.resolve("accounts.csv"),
+            "accountId,bankName,accountNumber,accountType,balance,currency,importedAt\n" +
+            "00000000-0000-0000-0000-000000000001,ING,ACC1,CHECKING,100.00,EUR,2026-09-03T10:00:00\n");
+
+        var loaded = sut.findAll();
+
+        assertThat(loaded).hasSize(1);
+        LocalDate actual = (LocalDate) asOfDateMethod.invoke(loaded.get(0));
+        assertThat(actual).isNull();
     }
 }
