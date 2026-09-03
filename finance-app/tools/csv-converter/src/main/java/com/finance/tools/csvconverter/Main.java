@@ -21,11 +21,24 @@ public class Main {
         String mappingFile = args[1];
         String outputFile = args[2];
 
-        // Read mapping — LinkedHashMap preserves key insertion order for column ordering
+        // Read mapping as mixed String/Map values to support date-transform entries
         ObjectMapper mapper = new ObjectMapper();
-        Map<String, String> columnMapping = mapper.readValue(
+        Map<String, Object> rawMapping = mapper.readValue(
                 new File(mappingFile),
-                new TypeReference<LinkedHashMap<String, String>>() {});
+                new TypeReference<LinkedHashMap<String, Object>>() {});
+
+        LinkedHashMap<String, ColumnDescriptor> columnMapping = new LinkedHashMap<>();
+        for (Map.Entry<String, Object> entry : rawMapping.entrySet()) {
+            Object value = entry.getValue();
+            if (value instanceof String) {
+                columnMapping.put(entry.getKey(), ColumnDescriptor.verbatim((String) value));
+            } else if (value instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, String> mapValue = (Map<String, String>) value;
+                columnMapping.put(entry.getKey(),
+                        ColumnDescriptor.dateTransform(mapValue.get("to"), mapValue.get("from")));
+            }
+        }
 
         String inputCsv  = Files.readString(Path.of(inputFile));
         String outputCsv = new CsvConverter().convert(inputCsv, columnMapping);

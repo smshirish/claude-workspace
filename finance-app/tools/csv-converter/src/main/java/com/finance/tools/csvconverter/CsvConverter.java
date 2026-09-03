@@ -5,11 +5,26 @@ import com.opencsv.exceptions.CsvException;
 
 import java.io.IOException;
 import java.io.StringReader;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.time.format.DateTimeParseException;
 import java.util.*;
 
 public class CsvConverter {
 
     public String convert(String inputCsv, Map<String, String> columnMapping) throws CsvConversionException {
+        LinkedHashMap<String, ColumnDescriptor> descriptors = new LinkedHashMap<>();
+        for (Map.Entry<String, String> entry : columnMapping.entrySet()) {
+            descriptors.put(entry.getKey(), ColumnDescriptor.verbatim(entry.getValue()));
+        }
+        return convertInternal(inputCsv, descriptors);
+    }
+
+    public String convert(String inputCsv, LinkedHashMap<String, ColumnDescriptor> mapping) throws CsvConversionException {
+        return convertInternal(inputCsv, mapping);
+    }
+
+    private String convertInternal(String inputCsv, LinkedHashMap<String, ColumnDescriptor> mapping) throws CsvConversionException {
         List<String[]> rows;
         try (CSVReader reader = new CSVReader(new StringReader(inputCsv))) {
             rows = reader.readAll();
@@ -21,35 +36,54 @@ public class CsvConverter {
             throw new CsvConversionException("Input CSV is empty — no header found");
         }
 
-        // Index input columns by name
         String[] inputHeader = rows.get(0);
         Map<String, Integer> headerIndex = new HashMap<>();
         for (int i = 0; i < inputHeader.length; i++) {
             headerIndex.put(inputHeader[i].trim(), i);
         }
 
-        // Validate every mapping key exists in the input header
-        for (String inputCol : columnMapping.keySet()) {
+        for (String inputCol : mapping.keySet()) {
             if (!headerIndex.containsKey(inputCol)) {
                 throw new CsvConversionException(
                         "Mapped input column not found in CSV header: '" + inputCol + "'");
             }
         }
 
-        // Build output lines — header first, then data rows
         StringBuilder sb = new StringBuilder();
-        sb.append(String.join(",", columnMapping.values())).append("\n");
+        List<String> outputCols = new ArrayList<>();
+        for (ColumnDescriptor desc : mapping.values()) {
+            outputCols.add(desc.outputColumn());
+        }
+        sb.append(String.join(",", outputCols)).append("\n");
 
         for (int i = 1; i < rows.size(); i++) {
             String[] inputRow = rows.get(i);
-            // Skip blank rows that may appear from a trailing newline
             if (inputRow.length == 0 || (inputRow.length == 1 && inputRow[0].trim().isEmpty())) {
                 continue;
             }
+            int rowIndex = i;
             List<String> outputValues = new ArrayList<>();
-            for (String inputCol : columnMapping.keySet()) {
+            for (Map.Entry<String, ColumnDescriptor> entry : mapping.entrySet()) {
+                String inputCol = entry.getKey();
+                ColumnDescriptor descriptor = entry.getValue();
                 int idx = headerIndex.get(inputCol);
-                outputValues.add(idx < inputRow.length ? inputRow[idx] : "");
+                String rawValue = idx < inputRow.length ? inputRow[idx] : "";
+
+                if (descriptor.isDateTransform()) {
+                    DateTimeFormatter formatter = DateTimeFormatter.ofPattern(
+                            descriptor.dateFromPattern(), Locale.ENGLISH);
+                    try {
+                        LocalDate date = LocalDate.parse(rawValue, formatter);
+                        outputValues.add(date.toString());
+                    } catch (DateTimeParseException e) {
+                        throw new CsvConversionException(
+                                "Column '" + inputCol + "': unparseable date '" + rawValue
+                                        + "' on data row " + rowIndex
+                                        + " (expected: " + descriptor.dateFromPattern() + ")");
+                    }
+                } else {
+                    outputValues.add(rawValue);
+                }
             }
             sb.append(String.join(",", outputValues)).append("\n");
         }

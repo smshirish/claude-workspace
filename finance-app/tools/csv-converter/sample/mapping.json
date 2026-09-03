@@ -1,7 +1,8 @@
 {
-  "bank":          "bankName",
-  "acc_no":       "accountNumber",
-  "account_purpose": "accountType",
-  "amount_chf":        "balance",
-  "account_currency":          "currency"
+  "bank":             "bankName",
+  "acc_no":           "accountNumber",
+  "account_purpose":  "accountType",
+  "amount_chf":       "balance",
+  "account_currency": "currency",
+  "as_of_date":       { "to": "asOfDate", "type": "date", "from": "dd-MMM-yy" }
 }

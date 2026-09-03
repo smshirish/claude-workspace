@@ -37,7 +37,7 @@ public class AccountCsvRowValidator {
             int rowNumber = i + 1;
             String[] row = rawRows.get(i);
 
-            // Mandatory blank checks for all 5 columns
+            // Mandatory blank checks for all 6 columns
             for (int col = 0; col < COLUMN_NAMES.length; col++) {
                 String value = col < row.length ? row[col] : "";
                 if (value == null || value.isBlank()) {
