@@ -10,3 +10,4 @@
 **Total cost: $1.187579 USD**
 | unit-test-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 197973 | 11 | 3646 | 297526 | 0.25203454999999997 |
 | dev-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 78097 | 8 | 1149 | 179459 | 0.16450895 |
+| reviewer-agent | 1 | claude-haiku-4-5-20251001,claude-sonnet-4-6 | 226198 | 17 | 11624 | 744702 | 0.60504635 |
