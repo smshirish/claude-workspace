@@ -3,6 +3,8 @@ package com.finance.tools.csvconverter;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 
+import java.lang.reflect.InvocationTargetException;
+import java.lang.reflect.Method;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
@@ -108,5 +110,63 @@ class CsvConverterTest {
 
         assertEquals("bankName,accountNumber", lines[0]);
         assertEquals("Chase,000111222", lines[1]);
+    }
+
+    // T-7 (new): date-transform mapping converts "21-Jun-26" using "dd-MMM-yy" → "2026-06-21"
+    // Uses reflection: ColumnDescriptor class and CsvConverter.convert(LinkedHashMap<ColumnDescriptor>)
+    // are not yet implemented. Fails with ClassNotFoundException until production code is added.
+    @Test
+    void convertsDateTransformColumnUsingDeclaredPattern() throws Exception {
+        Class<?> colDesc = Class.forName("com.finance.tools.csvconverter.ColumnDescriptor");
+        Method verbatim = colDesc.getMethod("verbatim", String.class);
+        Method dateTransform = colDesc.getMethod("dateTransform", String.class, String.class);
+
+        LinkedHashMap<String, Object> mapping = new LinkedHashMap<>();
+        mapping.put("Bank",       verbatim.invoke(null, "bankName"));
+        mapping.put("AcctNum",    verbatim.invoke(null, "accountNumber"));
+        mapping.put("Type",       verbatim.invoke(null, "accountType"));
+        mapping.put("Amount",     verbatim.invoke(null, "balance"));
+        mapping.put("Curr",       verbatim.invoke(null, "currency"));
+        mapping.put("as_of_date", dateTransform.invoke(null, "asOfDate", "dd-MMM-yy"));
+
+        String input = "Bank,AcctNum,Type,Amount,Curr,as_of_date\nChase,000111222,CHECKING,1500.00,USD,21-Jun-26";
+
+        Method convertMethod = CsvConverter.class.getMethod("convert", String.class, LinkedHashMap.class);
+        String result = (String) convertMethod.invoke(converter, input, mapping);
+        String[] lines = result.trim().split("\n");
+
+        assertEquals(2, lines.length);
+        assertEquals("bankName,accountNumber,accountType,balance,currency,asOfDate", lines[0]);
+        assertEquals("Chase,000111222,CHECKING,1500.00,USD,2026-06-21", lines[1]);
+    }
+
+    // T-8 (new): unparseable date cell → CsvConversionException naming column, bad value, and row number
+    // Uses reflection: same as T-7. Fails with ClassNotFoundException until production code is added.
+    @Test
+    void throwsCsvConversionExceptionForUnparseableDateCellWithColumnValueAndRowInMessage() throws Exception {
+        Class<?> colDesc = Class.forName("com.finance.tools.csvconverter.ColumnDescriptor");
+        Method verbatim = colDesc.getMethod("verbatim", String.class);
+        Method dateTransform = colDesc.getMethod("dateTransform", String.class, String.class);
+
+        LinkedHashMap<String, Object> mapping = new LinkedHashMap<>();
+        mapping.put("Bank",       verbatim.invoke(null, "bankName"));
+        mapping.put("AcctNum",    verbatim.invoke(null, "accountNumber"));
+        mapping.put("Type",       verbatim.invoke(null, "accountType"));
+        mapping.put("Amount",     verbatim.invoke(null, "balance"));
+        mapping.put("Curr",       verbatim.invoke(null, "currency"));
+        mapping.put("as_of_date", dateTransform.invoke(null, "asOfDate", "dd-MMM-yy"));
+
+        String input = "Bank,AcctNum,Type,Amount,Curr,as_of_date\nChase,000111222,CHECKING,1500.00,USD,not-a-date";
+
+        Method convertMethod = CsvConverter.class.getMethod("convert", String.class, LinkedHashMap.class);
+        InvocationTargetException thrown = assertThrows(InvocationTargetException.class,
+                () -> convertMethod.invoke(converter, input, mapping));
+
+        assertTrue(thrown.getCause() instanceof CsvConversionException,
+                "Expected CsvConversionException but got: " + thrown.getCause());
+        String message = thrown.getCause().getMessage();
+        assertTrue(message.contains("as_of_date"), "Message must name input column");
+        assertTrue(message.contains("not-a-date"), "Message must contain offending value");
+        assertTrue(message.contains("1"), "Message must contain row number");
     }
 }

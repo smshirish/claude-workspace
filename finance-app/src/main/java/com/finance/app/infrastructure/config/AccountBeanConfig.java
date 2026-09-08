@@ -11,12 +11,19 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
 
+import java.time.Clock;
+
 @Configuration
 public class AccountBeanConfig {
 
     @Bean
-    public AccountFileParser accountFileParser() {
-        return new OpenCsvAccountParser();
+    public Clock clock() {
+        return Clock.systemDefaultZone();
+    }
+
+    @Bean
+    public AccountFileParser accountFileParser(Clock clock) {
+        return new OpenCsvAccountParser(clock);
     }
 
     // Each port gets its own @Bean method (rather than one shared AccountApplicationService bean)

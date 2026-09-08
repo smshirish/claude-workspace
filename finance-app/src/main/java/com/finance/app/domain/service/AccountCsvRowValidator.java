@@ -4,9 +4,13 @@ import com.finance.app.domain.model.AccountType;
 import com.finance.app.domain.model.validation.RowValidationError;
 
 import java.math.BigDecimal;
+import java.time.Clock;
+import java.time.LocalDate;
+import java.time.format.DateTimeParseException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class AccountCsvRowValidator {
@@ -16,6 +20,16 @@ public class AccountCsvRowValidator {
             .map(Enum::name)
             .collect(Collectors.joining(", "));
 
+    private final Clock clock;
+
+    public AccountCsvRowValidator() {
+        this.clock = Clock.systemDefaultZone();
+    }
+
+    public AccountCsvRowValidator(Clock clock) {
+        this.clock = Objects.requireNonNull(clock);
+    }
+
     public List<RowValidationError> validate(List<String[]> rawRows) {
         List<RowValidationError> errors = new ArrayList<>();
 
@@ -23,7 +37,7 @@ public class AccountCsvRowValidator {
             int rowNumber = i + 1;
             String[] row = rawRows.get(i);
 
-            // Mandatory blank checks for all 5 columns
+            // Mandatory blank checks for all 6 columns
             for (int col = 0; col < COLUMN_NAMES.length; col++) {
                 String value = col < row.length ? row[col] : "";
                 if (value == null || value.isBlank()) {
@@ -50,6 +64,21 @@ public class AccountCsvRowValidator {
                 } catch (NumberFormatException e) {
                     errors.add(new RowValidationError(rowNumber, "balance",
                             "'" + balanceValue + "' is not a valid decimal number"));
+                }
+            }
+
+            // asOfDate validation (position 5) — only if not blank (blank already caught above)
+            String asOfDateValue = row.length > 5 ? row[5] : "";
+            if (asOfDateValue != null && !asOfDateValue.isBlank()) {
+                try {
+                    LocalDate parsed = LocalDate.parse(asOfDateValue);
+                    if (parsed.isAfter(LocalDate.now(clock))) {
+                        errors.add(new RowValidationError(rowNumber, "asOfDate",
+                                "Date must not be in the future"));
+                    }
+                } catch (DateTimeParseException e) {
+                    errors.add(new RowValidationError(rowNumber, "asOfDate",
+                            "'" + asOfDateValue + "' is not a valid date (expected YYYY-MM-DD)"));
                 }
             }
         }

@@ -3,6 +3,7 @@ package com.finance.app.domain.model;
 import org.junit.jupiter.api.Test;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import static org.assertj.core.api.Assertions.*;
@@ -27,6 +28,31 @@ class BankAccountTest {
         assertThat(account.accountType()).isEqualTo(AccountType.SAVINGS);
         assertThat(account.balance()).isEqualByComparingTo("250.75");
         assertThat(account.currency()).isEqualTo("EUR");
+    }
+
+    // T1.1b — 5-arg create() sets asOfDate to null
+    @Test
+    void create_fiveArgFactory_asOfDateIsNull() {
+        var account = BankAccount.create("ING", "ACC1", AccountType.CHECKING, BigDecimal.ONE, "EUR");
+
+        assertThat(account.asOfDate()).isNull();
+    }
+
+    // T1.1c — 6-arg create() sets asOfDate to the provided LocalDate
+    @Test
+    void create_sixArgFactory_setsAsOfDate() {
+        LocalDate date = LocalDate.of(2026, 8, 31);
+        var account = BankAccount.create("ING", "ACC1", AccountType.CHECKING, BigDecimal.ONE, "EUR", date);
+
+        assertThat(account.asOfDate()).isEqualTo(date);
+    }
+
+    // T1.1d — 6-arg create() with null asOfDate stores null (field is nullable)
+    @Test
+    void create_sixArgFactoryWithNullDate_asOfDateIsNull() {
+        var account = BankAccount.create("ING", "ACC1", AccountType.CHECKING, BigDecimal.ONE, "EUR", null);
+
+        assertThat(account.asOfDate()).isNull();
     }
 
     // T1.2 — null guards per field
