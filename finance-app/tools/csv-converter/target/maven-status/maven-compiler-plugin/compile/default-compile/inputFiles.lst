@@ -1,3 +1,4 @@
+/workspaces/claude-workspace/finance-app/tools/csv-converter/src/main/java/com/finance/tools/csvconverter/ColumnDescriptor.java
 /workspaces/claude-workspace/finance-app/tools/csv-converter/src/main/java/com/finance/tools/csvconverter/CsvConversionException.java
 /workspaces/claude-workspace/finance-app/tools/csv-converter/src/main/java/com/finance/tools/csvconverter/CsvConverter.java
 /workspaces/claude-workspace/finance-app/tools/csv-converter/src/main/java/com/finance/tools/csvconverter/Main.java

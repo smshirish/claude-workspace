@@ -16,13 +16,23 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.math.BigDecimal;
 import java.nio.charset.StandardCharsets;
+import java.time.Clock;
+import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
 
 public class OpenCsvAccountParser implements AccountFileParser {
 
     private final AccountCsvSchemaValidator schemaValidator = new AccountCsvSchemaValidator();
-    private final AccountCsvRowValidator rowValidator = new AccountCsvRowValidator();
+    private final AccountCsvRowValidator rowValidator;
+
+    public OpenCsvAccountParser() {
+        this(Clock.systemDefaultZone());
+    }
+
+    public OpenCsvAccountParser(Clock clock) {
+        this.rowValidator = new AccountCsvRowValidator(clock);
+    }
 
     @Override
     public List<BankAccount> parse(InputStream inputStream, String fileName) {
@@ -81,12 +91,14 @@ public class OpenCsvAccountParser implements AccountFileParser {
             } catch (IllegalArgumentException e) {
                 throw new AccountImportException("Unrecognised accountType: " + row[2], e);
             }
+            LocalDate asOfDate = LocalDate.parse(row[5]);
             accounts.add(BankAccount.create(
                     row[0],
                     row[1],
                     accountType,
                     new BigDecimal(row[3]),
-                    row[4]
+                    row[4],
+                    asOfDate
             ));
         }
         return accounts;

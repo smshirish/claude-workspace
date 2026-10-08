@@ -42,11 +42,11 @@ async function submitFilter(page: Page, values: { bankName?: string; accountNumb
 // ---------------------------------------------------------------------------
 
 const FILTER_FIXTURE_CSV = [
-  'bankName,accountNumber,accountType,balance,currency',
-  'Chase,000111222,SAVINGS,500.00,USD',
-  'Chase,333444555,CHECKING,200.00,USD',
-  'Ally,666777888,SAVINGS,800.00,USD',
-  'BOFA,999888777,CHECKING,150.00,USD',
+  'bankName,accountNumber,accountType,balance,currency,asOfDate',
+  'Chase,000111222,SAVINGS,500.00,USD,2026-08-31',
+  'Chase,333444555,CHECKING,200.00,USD,2026-08-31',
+  'Ally,666777888,SAVINGS,800.00,USD,2026-08-31',
+  'BOFA,999888777,CHECKING,150.00,USD,2026-08-31',
 ].join('\n');
 
 // ---------------------------------------------------------------------------

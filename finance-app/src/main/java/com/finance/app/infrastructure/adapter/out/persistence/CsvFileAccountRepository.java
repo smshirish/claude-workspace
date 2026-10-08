@@ -12,6 +12,7 @@ import java.io.IOException;
 import java.math.BigDecimal;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,7 +20,7 @@ import java.util.List;
 @Repository
 public class CsvFileAccountRepository implements AccountRepository {
 
-    private static final String HEADER = "accountId,bankName,accountNumber,accountType,balance,currency,importedAt";
+    private static final String HEADER = "accountId,bankName,accountNumber,accountType,balance,currency,importedAt,asOfDate";
 
     private final Path filePath;
 
@@ -65,7 +66,11 @@ public class CsvFileAccountRepository implements AccountRepository {
     }
 
     private BankAccount parseLine(String line) {
-        var p = line.split(",", 7);
+        var p = line.split(",", 8);
+        LocalDate asOfDate = null;
+        if (p.length >= 8 && !p[7].isBlank()) {
+            asOfDate = LocalDate.parse(p[7]);
+        }
         return new BankAccount(
                 AccountId.of(p[0]),
                 p[1],
@@ -73,7 +78,8 @@ public class CsvFileAccountRepository implements AccountRepository {
                 AccountType.valueOf(p[3]),
                 new BigDecimal(p[4]),
                 p[5],
-                LocalDateTime.parse(p[6])
+                LocalDateTime.parse(p[6]),
+                asOfDate
         );
     }
 
@@ -85,7 +91,8 @@ public class CsvFileAccountRepository implements AccountRepository {
                 a.accountType().name(),
                 a.balance().toPlainString(),
                 a.currency(),
-                a.importedAt().toString()
+                a.importedAt().toString(),
+                a.asOfDate() != null ? a.asOfDate().toString() : ""
         );
     }
 }

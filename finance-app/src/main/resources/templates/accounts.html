@@ -67,6 +67,7 @@
                 th:if="${activeSortField == 'balance'}"
                 th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
         <th>Currency</th>
+        <th data-testid="column-asOfDate">As Of Date</th>
     </tr>
     </thead>
     <tbody>
@@ -76,12 +77,15 @@
         <td th:text="${account.accountType()}"></td>
         <td class="balance-cell" th:text="${account.balance()}"></td>
         <td th:text="${account.currency()}"></td>
+        <td th:text="${account.asOfDate()}"
+            th:attr="data-testid='account-asOfDate-' + ${account.accountId()}"></td>
     </tr>
     </tbody>
     <tfoot>
     <tr>
         <td colspan="3">Total</td>
         <td class="balance-cell" th:text="${totalBalance}" data-testid="accounts-total-balance"></td>
+        <td></td>
         <td></td>
     </tr>
     </tfoot>
