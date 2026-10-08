@@ -36,7 +36,7 @@ class CsvFileAccountRepositoryTest {
         sut.saveAll(accounts);
 
         var lines = Files.readAllLines(tempDir.resolve("accounts.csv"));
-        assertThat(lines.get(0)).isEqualTo("accountId,bankName,accountNumber,accountType,balance,currency,importedAt");
+        assertThat(lines.get(0)).isEqualTo("accountId,bankName,accountNumber,accountType,balance,currency,importedAt,asOfDate");
         assertThat(lines).hasSize(3); // header + 2 accounts
         assertThat(lines.get(1)).contains("ING").contains("NL91ABNA0417164300").contains("CHECKING");
         assertThat(lines.get(2)).contains("Rabobank").contains("NL20INGB0001234567").contains("SAVINGS");

@@ -10,6 +10,8 @@
 | 2.1 | CSV import | Upload a file to populate the account list |
 | 2.2 | CSV validation | Schema (Tier 1 fail-fast) + row-level (Tier 2 accumulative) with structured error display |
 | 2.3 | Column sorting | Sort by Bank Name, Account Type, or Balance; toggle direction |
+| 2.4 | Filter bar | Partial case-insensitive filter on Bank Name, Account Number, Account Type; AND logic; GET-based, preserves sort |
+| 2.5 | Filtered total | Balance sum in `<tfoot>`, reflects the active filter; row hidden with the table in the empty state |
 
 ---
 
@@ -17,10 +19,11 @@
 
 ### Phase 2 — Account Listing Enhancements
 
-| Order | Feature | Plan file | E2E spec | Status |
-|---|---|---|---|---|
-| B | Filter bar | `.claude/context/PLAN_B_FilterBar.md` | `e2e/tests/account-filter.spec.ts` | Not started |
-| C | Filtered total (balance sum in `<tfoot>`) | `.claude/context/PLAN_C_FilteredTotal.md` | `e2e/tests/account-total.spec.ts` | Not started |
+Complete. All three features (A Column sorting, B Filter bar, C Filtered total) implemented and merged — see Implemented Features 2.3–2.5.
+
+Deferred from Feature C (see `.claude/context/REQUEST_C_FilteredTotal.md`):
+- Visual styling of the total row (bold, distinct color, total icon)
+- `data-testid` on the total label cell
 
 ### Phase 3 — Investment Portfolio Analytics
 

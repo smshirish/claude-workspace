@@ -9,10 +9,10 @@ class AccountCsvSchemaValidatorTest {
 
     private final AccountCsvSchemaValidator sut = new AccountCsvSchemaValidator();
 
-    // S-1: correct 5-column header in exact order → no exception
+    // S-1 (update): correct 6-column header (including asOfDate) → no exception
     @Test
-    void validate_correctFiveColumnHeader_noExceptionThrown() {
-        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency"};
+    void validate_correctSixColumnHeader_noExceptionThrown() {
+        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency", "asOfDate"};
 
         assertThatNoException().isThrownBy(() -> sut.validate(header));
     }
@@ -27,7 +27,6 @@ class AccountCsvSchemaValidatorTest {
                 .satisfies(ex -> {
                     String schemaError = ((CsvSchemaException) ex).getSchemaError();
                     assertThat(schemaError).isNotBlank();
-                    // message should reference the expected column name and/or position
                     assertThat(schemaError).containsAnyOf("accountNumber", "position 2", "2");
                 });
     }
@@ -54,10 +53,10 @@ class AccountCsvSchemaValidatorTest {
                 .isInstanceOf(CsvSchemaException.class);
     }
 
-    // S-5: extra column appended at end → no exception (extra column silently ignored)
+    // S-5 (update): 7-column header — required 6 (including asOfDate) + extra trailing "notes" → no exception
     @Test
     void validate_extraTrailingColumn_noExceptionThrown() {
-        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency", "notes"};
+        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency", "asOfDate", "notes"};
 
         assertThatNoException().isThrownBy(() -> sut.validate(header));
     }
@@ -69,5 +68,27 @@ class AccountCsvSchemaValidatorTest {
 
         assertThatThrownBy(() -> sut.validate(header))
                 .isInstanceOf(CsvSchemaException.class);
+    }
+
+    // S-7 (new): 5-column header (first 5 correct, "asOfDate" absent) → CsvSchemaException
+    @Test
+    void validate_fiveColumnHeaderMissingAsOfDate_throwsCsvSchemaException() {
+        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency"};
+
+        assertThatThrownBy(() -> sut.validate(header))
+                .isInstanceOf(CsvSchemaException.class);
+    }
+
+    // S-8 (new): 6-column header with wrong name at position 6 → CsvSchemaException referencing asOfDate or position 6
+    @Test
+    void validate_sixColumnHeaderWrongNameAtPosition6_throwsCsvSchemaException() {
+        String[] header = {"bankName", "accountNumber", "accountType", "balance", "currency", "wrongName"};
+
+        assertThatThrownBy(() -> sut.validate(header))
+                .isInstanceOf(CsvSchemaException.class)
+                .satisfies(ex -> {
+                    String schemaError = ((CsvSchemaException) ex).getSchemaError();
+                    assertThat(schemaError).containsAnyOf("asOfDate", "position 6", "6");
+                });
     }
 }

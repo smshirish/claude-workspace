@@ -7,3 +7,5 @@ finance-app/tools/csv-converter/sample/accounts.xlsx
 finance-app/tools/csv-converter/sample/accounts_converted.csv
 finance-app/tools/csv-converter/sample/accounts.csv
 finance-app/pipeline/
+finance-app/tools/csv-converter/target/surefire-reports/com.finance.tools.csvconverter.CsvConverterTest.txt
+finance-app/tools/csv-converter/target/surefire-reports/TEST-com.finance.tools.csvconverter.CsvConverterTest.xml
