@@ -36,7 +36,9 @@
 - Handoff status: @.claude/context/HANDOFF.md
 
 ## Agentic Pipeline (Spec -> Test -> Dev -> Review -> E2E)
-- Driver: `.claude/orchestration/orchestrate.sh <FeatureName>` — runs each stage as a separate headless `claude -p` process with its own `.claude/orchestration/settings/*.json` (write-scope enforced via `permissions.deny`, not prompt convention).
+- **Entry point:** `.claude/orchestration/run-pipeline.sh <FeatureName>` — always use this, never call `orchestrate.sh` directly. It runs pre-flight checks (REQUEST/PLAN file exists, no stray uncommitted changes, required tools present) before handing off.
+- **Driver:** `.claude/orchestration/orchestrate.sh <FeatureName>` — called by `run-pipeline.sh`; runs each stage as a separate headless `claude -p` process with its own `.claude/orchestration/settings/*.json` (write-scope enforced via `permissions.deny`, not prompt convention).
 - Roles: Spec Agent (`.claude/rules/spec.md`) -> Unit Test Agent (`.claude/rules/testing.md`) -> Dev Agent (`.claude/rules/dev.md`, retries up to 3x against failing tests) -> Reviewer (`.claude/rules/reviewer.md`, read-only rubber duck, up to 3 request-changes rounds) -> E2E Agent (`.claude/rules/e2e.md`).
 - State: `pipeline/WORKFLOW_STATE.json` (current stage/attempt, orchestrator-owned, gitignored), `pipeline/RESULT.json` (last stage's pass/fail, gitignored) — both live outside `.claude/` because that directory is a hardcoded-protected path headless agents can never write into. `.claude/context/REVIEW_<Feature>.md` (reviewer's verdict, committed) is populated by the orchestrator copying the agent's draft, not written directly by the agent.
 - Git: orchestrator commits per stage on `feature/<Feature>`. It never pushes or merges — that's a manual step after the pipeline reports done.
+- **Trigger:** When the user asks to "develop", "build", "run the pipeline", or "orchestrate" a feature, run `bash .claude/orchestration/run-pipeline.sh <FeatureName>` directly — no slash command or sub-agent needed.
