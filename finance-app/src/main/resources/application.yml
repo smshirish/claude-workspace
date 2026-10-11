@@ -16,4 +16,4 @@ finance:
   security:
     default-admin-password: admin123
   anonymisation:
-    mapping-file: ${user.home}/.finance-app/data/anonym_to_real_id.json
+    mapping-file: ${MAPPING_FILE}
