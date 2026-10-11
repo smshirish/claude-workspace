@@ -274,26 +274,34 @@ def calculate_totals(xlsx_path: Path):
 
 
 def main():
-    parser = argparse.ArgumentParser(description="Convert PDF statement to Excel, preserving tables.")
-    parser.add_argument("input_pdf", help="Path to input PDF file")
+    parser = argparse.ArgumentParser(
+        description="Convert PDF statement to Excel, or calculate per-symbol totals from an existing Excel.",
+        epilog=(
+            "Examples:\n"
+            "  Convert PDF:       pdf_to_excel.py statement.pdf\n"
+            "  Calculate totals:  pdf_to_excel.py --total statement.xlsx"
+        ),
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+    )
+    parser.add_argument("input_pdf", nargs="?", help="Path to input PDF file (required for conversion)")
     parser.add_argument("output_xlsx", nargs="?", help="Path to output Excel file (default: same name as PDF)")
-    parser.add_argument("--total", metavar="XLSX", nargs="?", const="__derive__",
-                        help="Calculate per-symbol Proceeds totals from an existing Excel file "
-                             "(defaults to the xlsx derived from input_pdf)")
+    parser.add_argument("--total", metavar="XLSX",
+                        help="Calculate per-symbol Proceeds totals from an existing Excel file")
     args = parser.parse_args()
 
-    pdf_path = Path(args.input_pdf).resolve()
-    xlsx_path = Path(args.output_xlsx).resolve() if args.output_xlsx else pdf_path.with_suffix(".xlsx")
-
     if args.total is not None:
-        # --total mode: use explicitly supplied path or fall back to derived xlsx name
-        target = xlsx_path if args.total == "__derive__" else Path(args.total).resolve()
-        calculate_totals(target)
+        calculate_totals(Path(args.total).resolve())
         return
 
+    if not args.input_pdf:
+        parser.error("input_pdf is required when not using --total")
+
+    pdf_path = Path(args.input_pdf).resolve()
     if not pdf_path.exists():
         print(f"[ERROR] File not found: {pdf_path}", file=sys.stderr)
         sys.exit(1)
+
+    xlsx_path = Path(args.output_xlsx).resolve() if args.output_xlsx else pdf_path.with_suffix(".xlsx")
 
     print(f"[INFO] Input:  {pdf_path}")
     print(f"[INFO] Output: {xlsx_path}")
