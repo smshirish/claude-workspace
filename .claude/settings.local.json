@@ -41,7 +41,11 @@
       "Bash(git checkout *)",
       "Bash(grep -v \"^commit\\\\|^Author\\\\|^Date\\\\|^Merge\\\\|^$\\\\|^\\\\s\")",
       "Bash(git -C /workspaces/claude-workspace add finance-app/pipeline/REQUEST_AsOfDateVersioning.md)",
-      "Bash(git -C /workspaces/claude-workspace commit -m ' *)"
+      "Bash(git -C /workspaces/claude-workspace commit -m ' *)",
+      "Bash(mvn package *)",
+      "Bash(test/smoke_account_conversion.bash)",
+      "Bash(chmod +x bin/stop.sh)",
+      "Bash(bin/stop.sh)"
     ]
   }
 }

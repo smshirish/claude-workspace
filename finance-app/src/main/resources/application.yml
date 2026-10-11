@@ -1,11 +1,13 @@
 spring:
   application:
     name: finance-app
+  config:
+    import: optional:file:./app.env[.properties]
   thymeleaf:
     cache: false
 
 server:
-  port: 8080
+  port: ${APP_PORT}
 
 finance:
   storage:

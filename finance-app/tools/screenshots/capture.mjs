@@ -3,7 +3,7 @@
  *
  * Usage:
  *   npm install          (first time only)
- *   node capture.mjs     (app must be running on http://localhost:8080)
+ *   node capture.mjs     (app must be running on the APP_PORT in app.env)
  *
  * Output: output/<feature>/<nn>_<description>.png
  *
@@ -16,7 +16,11 @@ import * as path from 'path';
 import * as os from 'os';
 import { fileURLToPath } from 'url';
 
-const BASE_URL = 'http://localhost:8080';
+// Port comes from finance-app/app.env (single source of truth)
+const APP_PORT = fs.readFileSync(
+  path.join(fileURLToPath(import.meta.url), '..', '..', '..', 'app.env'), 'utf8',
+).match(/^APP_PORT=(\d+)/m)[1];
+const BASE_URL = `http://localhost:${APP_PORT}`;
 const OUT_DIR = path.join(fileURLToPath(import.meta.url), '..', 'output');
 
 // ── CSV fixture ─────────────────────────────────────────────────────────────

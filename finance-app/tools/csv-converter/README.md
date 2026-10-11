@@ -73,7 +73,7 @@ A mapping value may be an object to reformat a date to ISO `yyyy-MM-dd`:
 
 ### accountType defaulting
 
-If a row's `accountType` is blank, or the column is absent (not in `mapping.json`, or its source column is not in the input), the value `SAVINGS` is used. Each defaulted row is logged to stderr, by data row number only (no account numbers):
+If a row's `accountType` is blank, or the column is absent (not in `mapping.json`, or its source column is not in the input), the value `SAVINGS` is used. A missing column is inserted at the position of its entry in `mapping.json` (appended at the end if it is not mapped at all). Each defaulted row is logged to stderr, by data row number only (no account numbers):
 
 ```
 [WARN] data row 2: accountType blank, defaulted to SAVINGS

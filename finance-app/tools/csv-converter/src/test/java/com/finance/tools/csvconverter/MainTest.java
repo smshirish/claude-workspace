@@ -63,7 +63,24 @@ class MainTest {
         String[] lines = Files.readString(out.resolve("account_anony_2026-06-21.csv")).split("\n");
         assertEquals("bankName,accountNumber,accountType,balance,currency,asOfDate", lines[0]);
         assertEquals("Chase,ANON-0001,SAVINGS,1500.00,USD,2026-06-21", lines[1]);
-        assertTrue(lines[1].endsWith(",SAVINGS"));
+    }
+
+    // M-13: Position follows mapping.json order, whatever it is (here accountType is mapped first)
+    @Test
+    void main_missingAccountTypePositionFollowsMappingOrder() throws Exception {
+        Path in = tempDir.resolve("in.csv");
+        Path mapping = tempDir.resolve("m.json");
+        Files.writeString(in, "Bank,AcctNum,as_of_date\nChase,000111222,21-Jun-26\n");
+        Files.writeString(mapping,
+                "{\"Type\":\"accountType\",\"Bank\":\"bankName\",\"AcctNum\":\"accountNumber\"," +
+                "\"as_of_date\":{\"to\":\"asOfDate\",\"type\":\"date\",\"from\":\"dd-MMM-yy\"}}");
+        Path out = tempDir.resolve("o");
+
+        Main.main(new String[]{in.toString(), mapping.toString(), out.toString()});
+
+        String[] lines = Files.readString(out.resolve("account_anony_2026-06-21.csv")).split("\n");
+        assertEquals("accountType,bankName,accountNumber,asOfDate", lines[0]);
+        assertEquals("SAVINGS,Chase,ANON-0001,2026-06-21", lines[1]);
     }
 
     // M-3: Output file name uses the ISO asOfDate
