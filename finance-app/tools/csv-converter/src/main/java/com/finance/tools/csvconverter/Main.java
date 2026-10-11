@@ -47,7 +47,23 @@ public class Main {
         }
 
         String inputCsv  = Files.readString(Path.of(inputFile));
-        String convertedCsv = new CsvConverter().convert(inputCsv, columnMapping);
+
+        // An accountType mapping whose source column is absent is dropped; the defaulter then fills the column
+        List<String> inputHeader = readHeader(inputCsv);
+        int accountTypePos = -1;  // position in mapping.json order; -1 if not mapped
+        int pos = 0;
+        for (ColumnDescriptor d : columnMapping.values()) {
+            if (AccountTypeDefaulter.COLUMN.equals(d.outputColumn())) {
+                accountTypePos = pos;
+            }
+            pos++;
+        }
+        columnMapping.entrySet().removeIf(e ->
+                AccountTypeDefaulter.COLUMN.equals(e.getValue().outputColumn())
+                        && !inputHeader.contains(e.getKey()));
+
+        String convertedCsv = new AccountTypeDefaulter()
+                .apply(new CsvConverter().convert(inputCsv, columnMapping), accountTypePos);
 
         String asOfDate = extractAsOfDate(convertedCsv);
 
@@ -74,6 +90,20 @@ public class Main {
 
         mapper.writerWithDefaultPrettyPrinter().writeValue(mappingOut.toFile(), anonymised.anonymToReal());
         System.out.println("Anonymisation mapping: " + mappingOut);
+    }
+
+    private static List<String> readHeader(String csv) throws CsvConversionException {
+        try (CSVReader reader = new CSVReader(new StringReader(csv))) {
+            String[] header = reader.readNext();
+            if (header == null) {
+                throw new CsvConversionException("Input CSV is empty — no header found");
+            }
+            List<String> names = new ArrayList<>();
+            for (String h : header) names.add(h.trim());
+            return names;
+        } catch (IOException | CsvException e) {
+            throw new CsvConversionException("Failed to parse input CSV: " + e.getMessage());
+        }
     }
 
     static String extractAsOfDate(String convertedCsv) throws CsvConversionException {

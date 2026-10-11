@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 INPUT_CSV="${1:-$SCRIPT_DIR/sample/accounts.csv}"
 MAPPING_JSON="${2:-$SCRIPT_DIR/sample/mapping.json}"
-OUTPUT_DIR="${3:-/tmp}"
+OUTPUT_DIR="${3:-$SCRIPT_DIR/sample}"
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
 

@@ -23,7 +23,7 @@ EOF
 cat > "$WORK/run2.csv" <<EOF
 $HEADER
 Credit Suisse,222222,SAVINGS,250,CHF,22-Jun-26
-Raiffeisen,333333,CHECKING,400,CHF,22-Jun-26
+Raiffeisen,333333,,400,CHF,22-Jun-26
 EOF
 
 OUT="$WORK/out"
@@ -36,12 +36,15 @@ assert_contains     "$RUN1" "Credit Suisse,ANON-0002"
 assert_not_contains "$RUN1" "111111"
 assert_not_contains "$RUN1" "222222"
 
-"$DIR/account_conversion.bash" "$WORK/run2.csv" "$DIR/sample/mapping.json" "$OUT" >/dev/null
+"$DIR/account_conversion.bash" "$WORK/run2.csv" "$DIR/sample/mapping.json" "$OUT" >/dev/null 2>"$WORK/run2.err"
 RUN2="$OUT/account_anony_2026-06-22.csv"
 [[ -f "$RUN2" ]] || fail "missing $RUN2"
 assert_contains     "$RUN2" "Credit Suisse,ANON-0002"
 assert_contains     "$RUN2" "Raiffeisen,ANON-0003"
 assert_not_contains "$RUN2" "333333"
+assert_contains     "$RUN2" "Raiffeisen,ANON-0003,SAVINGS"
+assert_contains     "$WORK/run2.err" "[WARN] data row 2: accountType blank, defaulted to SAVINGS"
+assert_not_contains "$WORK/run2.err" "333333"
 
 [[ -f "$RUN1" ]] || fail "first run output should still exist"
 

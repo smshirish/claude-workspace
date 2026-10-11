@@ -41,6 +41,31 @@ class MainTest {
         return outputDir;
     }
 
+    // M-11: Blank accountType in the input is written as SAVINGS
+    @Test
+    void main_blankAccountType_defaultsToSavings() throws Exception {
+        Path out = run("Chase,000111222,,1500.00,USD,21-Jun-26\n", tempDir.resolve("o"));
+        String row = Files.readString(out.resolve("account_anony_2026-06-21.csv")).split("\n")[1];
+        assertEquals("Chase,ANON-0001,SAVINGS,1500.00,USD,2026-06-21", row);
+    }
+
+    // M-12: accountType column absent from the input file → added as SAVINGS at its mapping.json position
+    @Test
+    void main_accountTypeColumnAbsentFromInput_addedAsSavings() throws Exception {
+        Path in = tempDir.resolve("in.csv");
+        Path mapping = tempDir.resolve("m.json");
+        Files.writeString(in, "Bank,AcctNum,Amount,Curr,as_of_date\nChase,000111222,1500.00,USD,21-Jun-26\n");
+        Files.writeString(mapping, MAPPING_JSON);
+        Path out = tempDir.resolve("o");
+
+        Main.main(new String[]{in.toString(), mapping.toString(), out.toString()});
+
+        String[] lines = Files.readString(out.resolve("account_anony_2026-06-21.csv")).split("\n");
+        assertEquals("bankName,accountNumber,accountType,balance,currency,asOfDate", lines[0]);
+        assertEquals("Chase,ANON-0001,SAVINGS,1500.00,USD,2026-06-21", lines[1]);
+        assertTrue(lines[1].endsWith(",SAVINGS"));
+    }
+
     // M-3: Output file name uses the ISO asOfDate
     @Test
     void main_outputFileNamedWithIsoAsOfDate() throws Exception {
