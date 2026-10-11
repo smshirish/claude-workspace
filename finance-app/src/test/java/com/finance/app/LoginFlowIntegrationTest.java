@@ -43,7 +43,7 @@ class LoginFlowIntegrationTest {
     void login_withValidCredentials_redirectsToDashboard() throws Exception {
         mockMvc.perform(post("/login")
                         .param("username", "admin")
-                        .param("password", "admin123")
+                        .param("password", "test-admin-password")
                         .with(csrf()))
                 .andExpect(status().is3xxRedirection())
                 .andExpect(redirectedUrl("/dashboard"));

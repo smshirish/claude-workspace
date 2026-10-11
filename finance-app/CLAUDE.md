@@ -8,7 +8,7 @@
 * **Backend:** Java 21, Spring Boot 3.3, Spring Security, Maven, Embedded Tomcat (Port 8080)
 * **Frontend:** Thymeleaf templates (`src/main/resources/templates/`: `login.html`, `dashboard.html`), Static CSS (`static/css/style.css`)
 * **Persistence:** No DB. Local CSV file at `~/.finance-app/data/users.csv`
-* **Properties:** `src/main/resources/application.yml` (Port 8080, CSV path, default admin creds: `admin123`)
+* **Properties:** `src/main/resources/application.yml` (Port 8080, CSV path, admin password from `ADMIN_PASSWORD` in the secrets file, see `bin/env.sh`)
 
 ### Architecture (`src/main/java/com/finance/app/`)
 * `domain/[model|exception|port/in|port/out]` — Core domain logic and interfaces.

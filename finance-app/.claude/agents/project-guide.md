@@ -54,12 +54,13 @@ mvn test | grep -E "FAILURE|ERROR|Tests run" -A 5
 
 ### Run Application (Backend)
 ```
-mvn spring-boot:run
+bin/start.sh        # sources bin/env.sh (app.env + secrets file), then mvn spring-boot:run
+bin/stop.sh         # stops the app
 ```
-Starts on **port 8080**. Must be running before E2E tests.
+Port comes from `app.env` (`APP_PORT`, default 8080). Requires `ADMIN_PASSWORD` in the secrets file (see `docs/architecture.md` → Configuration & Secrets). Must be running before E2E tests.
 
 ### E2E Tests
-Run from `finance-app/e2e/`:
+Run from `finance-app/e2e/` after `source ../bin/env.sh` (exports `ADMIN_PASSWORD`):
 ```
 npx playwright test
 ```

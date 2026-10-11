@@ -4,5 +4,6 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_DIR="$(dirname "$SCRIPT_DIR")"
 
+source "$SCRIPT_DIR/env.sh"
 cd "$APP_DIR"
 exec mvn spring-boot:run

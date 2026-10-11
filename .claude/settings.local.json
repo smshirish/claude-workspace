@@ -45,7 +45,12 @@
       "Bash(mvn package *)",
       "Bash(test/smoke_account_conversion.bash)",
       "Bash(chmod +x bin/stop.sh)",
-      "Bash(bin/stop.sh)"
+      "Bash(bin/stop.sh)",
+      "Bash(chmod 600 /tmp/finance-app-secrets.env)",
+      "Bash(sed -i 's|^cd \"$APP_DIR\"|source \"$SCRIPT_DIR/env.sh\"\\\\ncd \"$APP_DIR\"|' bin/start.sh)",
+      "Bash(sed -i 's|default-admin-password: admin123|default-admin-password: ${ADMIN_PASSWORD}|' src/main/resources/application.yml)",
+      "Bash(sed -i 's|\\\\${finance.security.default-admin-password:admin123}|${finance.security.default-admin-password}|' src/main/java/com/finance/app/infrastructure/config/DataInitializer.java)",
+      "Bash(sed -i 's|.param\\(\"password\", \"admin123\"\\)|.param\\(\"password\", \"test-admin-password\"\\)|' src/test/java/com/finance/app/LoginFlowIntegrationTest.java)"
     ]
   }
 }

@@ -21,7 +21,7 @@ public class DataInitializer {
     private final UserRepository userRepository;
     private final PasswordHasher passwordHasher;
 
-    @Value("${finance.security.default-admin-password:admin123}")
+    @Value("${finance.security.default-admin-password}")
     private String defaultAdminPassword;
 
     public DataInitializer(UserRepository userRepository, PasswordHasher passwordHasher) {

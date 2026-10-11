@@ -13,7 +13,7 @@
 # Defaults (relative to the script's directory):
 #   input.csv   → sample/accounts.csv
 #   mapping.json → sample/mapping.json
-#   output-dir  → /tmp
+#   output-dir  → finance-app/local (gitignored; where the web app reads the mapping)
 #
 # anonym_to_real_id.json lives in output-dir. Existing entries are kept (same real
 # account → same ANON id); new accounts get the next free id.
@@ -24,7 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 INPUT_CSV="${1:-$SCRIPT_DIR/sample/accounts.csv}"
 MAPPING_JSON="${2:-$SCRIPT_DIR/sample/mapping.json}"
-OUTPUT_DIR="${3:-/tmp}"
+OUTPUT_DIR="${3:-$SCRIPT_DIR/../../local}"
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
 

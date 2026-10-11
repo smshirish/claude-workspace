@@ -16,3 +16,6 @@ finance-app/tools/screenshots/output/
 finance-app/tools/csv-converter/sample/anonym_to_real_id.json
 finance-app/tools/csv-converter/sample/account.csv     
 **/anonym_to_real_id.json
+
+# Private runtime files: anonymisation mapping, secrets, converter output
+finance-app/local/
