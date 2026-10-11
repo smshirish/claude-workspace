@@ -3,12 +3,16 @@
 if [ -z "$3" ]; then
     echo "Usage: convert.bash <input.csv> <mapping.json> <output.csv>"
     echo
-    echo "  input.csv    - Source CSV with any column names"
-    echo "  mapping.json - Maps input column names to Finance App column names"
-    echo "  output.csv   - Destination file ready for Finance App upload"
+    echo "  input.csv             - Source CSV with any column names"
+    echo "  mapping.json          - Maps input column names to Finance App column names"
+    echo "  output.csv            - Destination file ready for Finance App upload (accountNumbers anonymised)"
+    echo
+    echo "  Outputs:"
+    echo "    <output.csv>              - Converted and anonymised CSV"
+    echo "    anonym_to_real_id.json    - Mapping of ANON-XXXX IDs to real account numbers (gitignored)"
     echo
     echo "Example:"
-    echo "  convert.bash sample/input.csv sample/mapping.json accounts.csv"
+    echo "  convert.bash sample/accounts.csv sample/mapping.json accounts_converted.csv"
     exit 1
 fi
 

@@ -13,5 +13,6 @@ finance-app/pipeline/REVIEW_*.md
 finance-app/pipeline/.last_*.json
 finance-app/tools/screenshots/node_modules/
 finance-app/tools/screenshots/output/
+**/anonym_to_real_id.json
 finance-app/tools/csv-converter/target/surefire-reports/com.finance.tools.csvconverter.CsvConverterTest.txt
 finance-app/tools/csv-converter/target/surefire-reports/TEST-com.finance.tools.csvconverter.CsvConverterTest.xml

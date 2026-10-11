@@ -41,9 +41,14 @@ public class Main {
         }
 
         String inputCsv  = Files.readString(Path.of(inputFile));
-        String outputCsv = new CsvConverter().convert(inputCsv, columnMapping);
+        String convertedCsv = new CsvConverter().convert(inputCsv, columnMapping);
 
-        Files.writeString(Path.of(outputFile), outputCsv);
+        AnonymisationResult anonymised = new Anonymiser().anonymise(convertedCsv);
+        Files.writeString(Path.of(outputFile), anonymised.csv());
         System.out.println("Written: " + outputFile);
+
+        Path mappingOut = Path.of(outputFile).resolveSibling("anonym_to_real_id.json");
+        mapper.writerWithDefaultPrettyPrinter().writeValue(mappingOut.toFile(), anonymised.anonymToReal());
+        System.out.println("Anonymisation mapping: " + mappingOut);
     }
 }
