@@ -20,7 +20,6 @@
 set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-JAR="$SCRIPT_DIR/target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar"
 
 INPUT_CSV="${1:-$SCRIPT_DIR/sample/accounts.csv}"
 MAPPING_JSON="${2:-$SCRIPT_DIR/sample/mapping.json}"
@@ -28,12 +27,6 @@ OUTPUT_CSV="${3:-/tmp/accounts_converted.csv}"
 MAPPING_OUT="$(dirname "$OUTPUT_CSV")/anonym_to_real_id.json"
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
-
-if [[ ! -f "$JAR" ]]; then
-  echo "[ERROR] Jar not found: $JAR"
-  echo "        Build first: cd $(dirname "$JAR")/.. && mvn package -DskipTests"
-  exit 1
-fi
 
 if [[ ! -f "$INPUT_CSV" ]]; then
   echo "[ERROR] Input CSV not found: $INPUT_CSV"
@@ -69,18 +62,7 @@ PYEOF
 
 # ── Step 2 & 3: convert + anonymise ──────────────────────────────────────────
 
-TEMP_OUT="$(mktemp --suffix=.csv)"
-trap 'rm -f "$CLEAN_CSV" "$TEMP_OUT"' EXIT
-
-java -jar "$JAR" "$CLEAN_CSV" "$MAPPING_JSON" "$TEMP_OUT"
-
-# ── Step 4: copy outputs ──────────────────────────────────────────────────────
-
-cp "$TEMP_OUT" "$OUTPUT_CSV"
-TEMP_MAPPING="$(dirname "$TEMP_OUT")/anonym_to_real_id.json"
-if [[ -f "$TEMP_MAPPING" ]]; then
-  cp "$TEMP_MAPPING" "$MAPPING_OUT"
-fi
+"$SCRIPT_DIR/convert.bash" "$CLEAN_CSV" "$MAPPING_JSON" "$OUTPUT_CSV"
 
 echo ""
 echo "[done]    Converted CSV:          $OUTPUT_CSV"

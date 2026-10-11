@@ -18,9 +18,17 @@ fi
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
-INPUT_CSV=sample/accounts.csv
-MAPPING_JSON=sample/mapping.json
-OUTPUT_CSV=sample/accounts_converted.csv
+JAR="$SCRIPT_DIR/target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar"
+
+INPUT_CSV="$1"
+MAPPING_JSON="$2"
+OUTPUT_CSV="$3"
+
+if [ ! -f "$JAR" ]; then
+    echo "[ERROR] Jar not found: $JAR"
+    echo "        Build first: cd $SCRIPT_DIR && mvn package -DskipTests"
+    exit 1
+fi
 
 # Strip UTF-8 BOM from input if present, write to a temp file
 CLEAN_INPUT="$INPUT_CSV"
@@ -30,4 +38,4 @@ if head -c 3 "$INPUT_CSV" | grep -q $'\xef\xbb\xbf'; then
     trap 'rm -f "$CLEAN_INPUT"' EXIT
 fi
 
-java -jar "$SCRIPT_DIR/target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar" "$CLEAN_INPUT" "$MAPPING_JSON" "$OUTPUT_CSV"
+java -jar "$JAR" "$CLEAN_INPUT" "$MAPPING_JSON" "$OUTPUT_CSV"
