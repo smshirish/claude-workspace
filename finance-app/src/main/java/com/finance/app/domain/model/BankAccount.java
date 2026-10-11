@@ -48,6 +48,11 @@ public class BankAccount {
                 accountType, balance, currency, LocalDateTime.now(), asOfDate);
     }
 
+    public BankAccount withResolvedAccountNumber(String resolvedNumber) {
+        return new BankAccount(accountId, bankName, resolvedNumber,
+                accountType, balance, currency, importedAt, asOfDate);
+    }
+
     public AccountId accountId() { return accountId; }
     public String bankName() { return bankName; }
     public String accountNumber() { return accountNumber; }

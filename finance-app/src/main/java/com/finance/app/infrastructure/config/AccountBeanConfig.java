@@ -5,8 +5,11 @@ import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.out.AccountFileParser;
+import com.finance.app.domain.port.out.AccountIdResolver;
 import com.finance.app.domain.port.out.AccountRepository;
+import com.finance.app.infrastructure.adapter.out.persistence.JsonFileAccountIdResolver;
 import com.finance.app.infrastructure.adapter.out.persistence.OpenCsvAccountParser;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.context.annotation.Lazy;
@@ -19,6 +22,12 @@ public class AccountBeanConfig {
     @Bean
     public Clock clock() {
         return Clock.systemDefaultZone();
+    }
+
+    @Bean
+    public AccountIdResolver accountIdResolver(
+            @Value("${finance.anonymisation.mapping-file}") String mappingFilePath) {
+        return new JsonFileAccountIdResolver(mappingFilePath);
     }
 
     @Bean

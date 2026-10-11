@@ -12,6 +12,7 @@ import com.finance.app.domain.port.in.FilterAccountsUseCase;
 import com.finance.app.domain.port.in.GetAllAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase;
 import com.finance.app.domain.port.in.ImportAccountsUseCase.ImportAccountsCommand;
+import com.finance.app.domain.port.out.AccountIdResolver;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -39,13 +40,16 @@ public class AccountController {
     private final ImportAccountsUseCase importAccountsUseCase;
     private final GetAllAccountsUseCase getAllAccountsUseCase;
     private final FilterAccountsUseCase filterAccountsUseCase;
+    private final AccountIdResolver accountIdResolver;
 
     public AccountController(ImportAccountsUseCase importAccountsUseCase,
                              GetAllAccountsUseCase getAllAccountsUseCase,
-                             FilterAccountsUseCase filterAccountsUseCase) {
+                             FilterAccountsUseCase filterAccountsUseCase,
+                             AccountIdResolver accountIdResolver) {
         this.importAccountsUseCase = importAccountsUseCase;
         this.getAllAccountsUseCase = getAllAccountsUseCase;
         this.filterAccountsUseCase = filterAccountsUseCase;
+        this.accountIdResolver = accountIdResolver;
     }
 
     @GetMapping
@@ -84,7 +88,7 @@ public class AccountController {
                 .map(BankAccount::balance)
                 .reduce(BigDecimal.ZERO, BigDecimal::add);
 
-        model.addAttribute("accounts", accounts);
+        model.addAttribute("accounts", resolveIds(accounts));
         model.addAttribute("totalBalance", totalBalance);
         model.addAttribute("activeSortField", activeField);
         model.addAttribute("activeSortDir", activeDir);
@@ -93,6 +97,12 @@ public class AccountController {
         model.addAttribute("filterAccountType", accountType);
         model.addAttribute("clearFilterUrl", "/accounts?sortField=" + activeField + "&sortDir=" + activeDir);
         return "accounts";
+    }
+
+    private List<BankAccount> resolveIds(List<BankAccount> accounts) {
+        return accounts.stream()
+                .map(a -> a.withResolvedAccountNumber(accountIdResolver.resolve(a.accountNumber())))
+                .toList();
     }
 
     private static List<BankAccount> sortAccounts(List<BankAccount> accounts, AccountSortCriteria criteria) {
@@ -115,19 +125,19 @@ public class AccountController {
             return "redirect:/accounts";
         } catch (CsvSchemaException e) {
             model.addAttribute("schemaError", e.getSchemaError());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
+            model.addAttribute("accounts", resolveIds(getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT)));
             return "accounts";
         } catch (CsvRowValidationException e) {
             model.addAttribute("rowErrors", e.getRowErrors());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
+            model.addAttribute("accounts", resolveIds(getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT)));
             return "accounts";
         } catch (AccountImportException e) {
             model.addAttribute("importError", e.getMessage());
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
+            model.addAttribute("accounts", resolveIds(getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT)));
             return "accounts";
         } catch (IOException e) {
             model.addAttribute("importError", "Could not read uploaded file.");
-            model.addAttribute("accounts", getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT));
+            model.addAttribute("accounts", resolveIds(getAllAccountsUseCase.getAllAccounts(AccountSortCriteria.DEFAULT)));
             return "accounts";
         }
     }
