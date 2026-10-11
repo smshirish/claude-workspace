@@ -24,7 +24,7 @@ JAR="$SCRIPT_DIR/target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar"
 
 INPUT_CSV="${1:-$SCRIPT_DIR/sample/accounts.csv}"
 MAPPING_JSON="${2:-$SCRIPT_DIR/sample/mapping.json}"
-OUTPUT_CSV="${3:-$SCRIPT_DIR/sample/accounts_converted.csv}"
+OUTPUT_CSV="${3:-/tmp/accounts_converted.csv}"
 MAPPING_OUT="$(dirname "$OUTPUT_CSV")/anonym_to_real_id.json"
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
