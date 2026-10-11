@@ -1,0 +1,20 @@
+bankName,accountNumber,accountType,balance,currency,asOfDate
+UBS,ANON-0001,Ubs monthly expenses account,26800,CHF,2026-06-21
+Credit suisse,ANON-0002,Shirish Main CS account -Salary ETC,0,CHF,2026-06-21
+UBS Credit suisse,ANON-0003,Joint Acc,0,CHF,2026-06-21
+Credit suisse,ANON-0004,CS Account to hold house funds,0,CHF,2026-06-21
+UBS Credit suisse,ANON-0005,Adi Private acc,28,CHF,2026-06-21
+UBS Credit suisse,ANON-0006,Adi Savings acc,0,CHF,2026-06-21
+UBS Credit suisse,ANON-0007,Mortgage payments account,4444,CHF,2026-06-21
+Credit suisse,ANON-0008,Mortgage Transactions acc,0,CHF,2026-06-21
+Neon CH,ANON-0009,Neon Shirish-Opened July 2023-Hold temp money -Replacement from Post account,16070,CHF,2000-01-21
+Neon CH,ANON-0009,Neon Shirish-BTC trading,12604,CHF,2000-01-21
+Interactive Brokers acc,ANON-0010,IB Trading acount portfolio value,422335,CHF,2000-01-21
+Interactive Brokers acc,ANON-0011,IB Trading acount cash,223500,CHF,2000-01-21
+Home-cash,ANON-0012,home cash,1000,CHF,2000-01-21
+Revolut,ANON-0013,Revolut EUR account,0,EUR,2000-01-21
+Revolut,ANON-0014,Revolut CHF account,195,CHF,2000-01-21
+finpension,ANON-0015,3rd Pillar account,50296,CHF,2000-01-21
+finpension,ANON-0015,finpension 3rd pillar account,11744,CHF,2000-01-21
+EquarePlus-esop account,ANON-0015,EquatePlus UBS shares locked 3 years,35342,CHF,2000-01-21
+EquarePlus-esopCompany part,ANON-0015,EquatePlus UBS shares - UBS award part,12335,CHF,2000-01-21

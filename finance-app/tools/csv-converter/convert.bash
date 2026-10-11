@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
 
 if [ -z "$3" ]; then
-    echo "Usage: convert.bash <input.csv> <mapping.json> <output.csv>"
+    echo "Usage: convert.bash <input.csv> <mapping.json> <output-dir>"
     echo
     echo "  input.csv             - Source CSV with any column names"
     echo "  mapping.json          - Maps input column names to Finance App column names"
-    echo "  output.csv            - Destination file ready for Finance App upload (accountNumbers anonymised)"
+    echo "  output-dir            - Directory for the output files (created if missing)"
     echo
     echo "  Outputs:"
-    echo "    <output.csv>              - Converted and anonymised CSV"
-    echo "    anonym_to_real_id.json    - Mapping of ANON-XXXX IDs to real account numbers (gitignored)"
+    echo "    account_anony_<asOfDate>.csv - Converted and anonymised CSV (asOfDate in YYYY-MM-DD)"
+    echo "    anonym_to_real_id.json       - ANON-XXXX -> real account numbers; merged across runs (gitignored)"
     echo
     echo "Example:"
-    echo "  convert.bash sample/accounts.csv sample/mapping.json accounts_converted.csv"
+    echo "  convert.bash sample/accounts.csv sample/mapping.json out/"
     exit 1
 fi
 
@@ -22,7 +22,7 @@ JAR="$SCRIPT_DIR/target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar"
 
 INPUT_CSV="$1"
 MAPPING_JSON="$2"
-OUTPUT_CSV="$3"
+OUTPUT_DIR="$3"
 
 if [ ! -f "$JAR" ]; then
     echo "[ERROR] Jar not found: $JAR"
@@ -38,4 +38,4 @@ if head -c 3 "$INPUT_CSV" | grep -q $'\xef\xbb\xbf'; then
     trap 'rm -f "$CLEAN_INPUT"' EXIT
 fi
 
-java -jar "$JAR" "$CLEAN_INPUT" "$MAPPING_JSON" "$OUTPUT_CSV"
+java -jar "$JAR" "$CLEAN_INPUT" "$MAPPING_JSON" "$OUTPUT_DIR"

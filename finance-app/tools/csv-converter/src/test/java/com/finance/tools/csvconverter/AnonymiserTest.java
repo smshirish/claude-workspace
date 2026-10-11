@@ -85,24 +85,90 @@ class AnonymiserTest {
         assertTrue(result.csv().startsWith("bankName,accountNumber"));
     }
 
-    // A-6: Main integration — anonym_to_real_id.json is written next to output, CSV is anonymised
+    private static final String HEADER = "bankName,accountNumber,accountType,balance,currency\n";
+
+    // A-7: Account already in the existing mapping reuses its ANON ID
+    @Test
+    void knownAccountNumberReusesExistingAnonId() throws CsvConversionException {
+        Map<String, String> existing = Map.of("ANON-0007", "000111222");
+
+        AnonymisationResult result = anonymiser.anonymise(
+                HEADER + "Chase,000111222,CHECKING,1500.00,USD\n", existing);
+
+        assertTrue(result.csv().split("\n")[1].contains("ANON-0007"));
+        assertEquals(Map.of("ANON-0007", "000111222"), result.anonymToReal());
+    }
+
+    // A-8: New account gets highest existing ID + 1, not ANON-0001
+    @Test
+    void newAccountNumberContinuesAfterHighestExistingId() throws CsvConversionException {
+        Map<String, String> existing = Map.of("ANON-0001", "000111222", "ANON-0002", "333444555");
+
+        AnonymisationResult result = anonymiser.anonymise(
+                HEADER + "Citi,666777888,CREDIT,-350.00,USD\n", existing);
+
+        assertTrue(result.csv().split("\n")[1].contains("ANON-0003"));
+        assertEquals("666777888", result.anonymToReal().get("ANON-0003"));
+    }
+
+    // A-9: Existing entries absent from the current CSV are preserved
+    @Test
+    void existingEntriesNotInCurrentCsvArePreserved() throws CsvConversionException {
+        Map<String, String> existing = Map.of("ANON-0001", "000111222", "ANON-0002", "333444555");
+
+        AnonymisationResult result = anonymiser.anonymise(
+                HEADER + "Chase,000111222,CHECKING,1500.00,USD\n", existing);
+
+        assertEquals(existing, result.anonymToReal());
+    }
+
+    // A-10: Gaps in existing IDs are not filled — next ID follows the maximum
+    @Test
+    void gapInExistingIdsIsNotFilled() throws CsvConversionException {
+        Map<String, String> existing = Map.of("ANON-0001", "000111222", "ANON-0005", "333444555");
+
+        AnonymisationResult result = anonymiser.anonymise(
+                HEADER + "Citi,666777888,CREDIT,-350.00,USD\n", existing);
+
+        assertEquals("666777888", result.anonymToReal().get("ANON-0006"));
+        assertEquals(3, result.anonymToReal().size());
+    }
+
+    // A-11: Empty existing mapping behaves like a first run
+    @Test
+    void emptyExistingMappingBehavesLikeFirstRun() throws CsvConversionException {
+        String csv = HEADER + "Chase,000111222,CHECKING,1500.00,USD\n";
+
+        assertEquals(anonymiser.anonymise(csv).anonymToReal(),
+                anonymiser.anonymise(csv, Map.of()).anonymToReal());
+    }
+
+    // A-12: Malformed ID in the existing mapping is rejected
+    @Test
+    void malformedExistingIdThrows() {
+        assertThrows(CsvConversionException.class, () -> anonymiser.anonymise(
+                HEADER + "Chase,000111222,CHECKING,1500.00,USD\n", Map.of("BAD-ID", "000111222")));
+    }
+
+    // A-6: Main integration — anonym_to_real_id.json is written to the output dir, CSV is anonymised
     @Test
     void mainWritesAnonymisationMappingFileNextToOutput() throws Exception {
         java.nio.file.Path tempDir = java.nio.file.Files.createTempDirectory("anon-test-");
         java.nio.file.Path inputCsv = tempDir.resolve("input.csv");
         java.nio.file.Path mappingJson = tempDir.resolve("mapping.json");
-        java.nio.file.Path outputCsv = tempDir.resolve("output.csv");
+        java.nio.file.Path outputCsv = tempDir.resolve("account_anony_2026-06-21.csv");
         java.nio.file.Path mappingOut = tempDir.resolve("anonym_to_real_id.json");
 
         java.nio.file.Files.writeString(inputCsv,
-                "Bank,AcctNum,Type,Amount,Curr\n" +
-                "Chase,000111222,CHECKING,1500.00,USD\n" +
-                "Ally,333444555,SAVINGS,800.00,USD\n");
+                "Bank,AcctNum,Type,Amount,Curr,as_of_date\n" +
+                "Chase,000111222,CHECKING,1500.00,USD,21-Jun-26\n" +
+                "Ally,333444555,SAVINGS,800.00,USD,21-Jun-26\n");
         java.nio.file.Files.writeString(mappingJson,
                 "{\"Bank\":\"bankName\",\"AcctNum\":\"accountNumber\"," +
-                "\"Type\":\"accountType\",\"Amount\":\"balance\",\"Curr\":\"currency\"}");
+                "\"Type\":\"accountType\",\"Amount\":\"balance\",\"Curr\":\"currency\"," +
+                "\"as_of_date\":{\"to\":\"asOfDate\",\"type\":\"date\",\"from\":\"dd-MMM-yy\"}}");
 
-        Main.main(new String[]{inputCsv.toString(), mappingJson.toString(), outputCsv.toString()});
+        Main.main(new String[]{inputCsv.toString(), mappingJson.toString(), tempDir.toString()});
 
         assertTrue(java.nio.file.Files.exists(mappingOut), "anonym_to_real_id.json must be written");
         String mappingContent = java.nio.file.Files.readString(mappingOut);

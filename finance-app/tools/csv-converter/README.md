@@ -25,14 +25,14 @@ Produces `target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar`.
 ## Usage
 
 ```bash
-java -jar target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar <input.csv> <mapping.json> <output.csv>
+java -jar target/csv-converter-1.0-SNAPSHOT-jar-with-dependencies.jar <input.csv> <mapping.json> <output-dir>
 ```
 
 | Argument | Description |
 |---|---|
 | `input.csv` | Source CSV with any column names |
 | `mapping.json` | Maps input column names → output column names |
-| `output.csv` | Destination file in Finance App format |
+| `output-dir` | Output directory (created if missing). Receives `account_anony_<asOfDate>.csv` (asOfDate as `YYYY-MM-DD`; the file must contain exactly one) and `anonym_to_real_id.json`, which is merged across runs: known accounts keep their ANON id, new accounts get the next free id |
 
 ---
 

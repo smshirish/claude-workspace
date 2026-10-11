@@ -7,7 +7,14 @@ public class Anonymiser {
 
     static final String ANON_COLUMN = "accountNumber";
 
+    private static final String ANON_PREFIX = "ANON-";
+
     public AnonymisationResult anonymise(String csv) throws CsvConversionException {
+        return anonymise(csv, Map.of());
+    }
+
+    public AnonymisationResult anonymise(String csv, Map<String, String> existingAnonToReal)
+            throws CsvConversionException {
         String[] lines = csv.split("\n", -1);
         if (lines.length == 0 || lines[0].isBlank()) {
             throw new CsvConversionException("CSV is empty — cannot anonymise");
@@ -27,8 +34,12 @@ public class Anonymiser {
         }
 
         Map<String, String> realToAnon = new LinkedHashMap<>();
-        Map<String, String> anonToReal = new LinkedHashMap<>();
+        Map<String, String> anonToReal = new LinkedHashMap<>(existingAnonToReal);
         int counter = 1;
+        for (Map.Entry<String, String> e : existingAnonToReal.entrySet()) {
+            realToAnon.put(e.getValue(), e.getKey());
+            counter = Math.max(counter, parseSuffix(e.getKey()) + 1);
+        }
 
         StringBuilder sb = new StringBuilder();
         sb.append(lines[0]).append("\n");
@@ -50,5 +61,16 @@ public class Anonymiser {
         }
 
         return new AnonymisationResult(sb.toString(), anonToReal);
+    }
+
+    private static int parseSuffix(String anonId) throws CsvConversionException {
+        try {
+            if (anonId.startsWith(ANON_PREFIX)) {
+                return Integer.parseInt(anonId.substring(ANON_PREFIX.length()));
+            }
+        } catch (NumberFormatException ignored) {
+            // falls through to the exception below
+        }
+        throw new CsvConversionException("Invalid anonymisation ID in existing mapping: '" + anonId + "'");
     }
 }

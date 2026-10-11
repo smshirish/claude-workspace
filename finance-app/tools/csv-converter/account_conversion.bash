@@ -5,17 +5,18 @@
 #   1. Strip summary/totals rows (rows with an empty first column)
 #   2. Run the csv-converter jar (column rename + date normalisation)
 #   3. Anonymise account numbers → ANON-XXXX
-#   4. Write anonymised CSV and anonym_to_real_id.json
+#   4. Write account_anony_<asOfDate>.csv and merge into anonym_to_real_id.json
 #
 # Usage:
-#   account_conversion.bash [input.csv] [mapping.json] [output.csv]
+#   account_conversion.bash [input.csv] [mapping.json] [output-dir]
 #
 # Defaults (relative to the script's directory):
 #   input.csv   → sample/accounts.csv
 #   mapping.json → sample/mapping.json
-#   output.csv  → sample/accounts_converted.csv
+#   output-dir  → /tmp
 #
-# anonym_to_real_id.json is always written alongside output.csv.
+# anonym_to_real_id.json lives in output-dir. Existing entries are kept (same real
+# account → same ANON id); new accounts get the next free id.
 
 set -euo pipefail
 
@@ -23,8 +24,7 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
 INPUT_CSV="${1:-$SCRIPT_DIR/sample/accounts.csv}"
 MAPPING_JSON="${2:-$SCRIPT_DIR/sample/mapping.json}"
-OUTPUT_CSV="${3:-/tmp/accounts_converted.csv}"
-MAPPING_OUT="$(dirname "$OUTPUT_CSV")/anonym_to_real_id.json"
+OUTPUT_DIR="${3:-/tmp}"
 
 # ── Validate inputs ───────────────────────────────────────────────────────────
 
@@ -62,8 +62,6 @@ PYEOF
 
 # ── Step 2 & 3: convert + anonymise ──────────────────────────────────────────
 
-"$SCRIPT_DIR/convert.bash" "$CLEAN_CSV" "$MAPPING_JSON" "$OUTPUT_CSV"
+"$SCRIPT_DIR/convert.bash" "$CLEAN_CSV" "$MAPPING_JSON" "$OUTPUT_DIR"
 
-echo ""
-echo "[done]    Converted CSV:          $OUTPUT_CSV"
-echo "[done]    Anonymisation mapping:  $MAPPING_OUT  (gitignored — keep private)"
+echo "[done]    Mapping is gitignored — keep private: $OUTPUT_DIR/anonym_to_real_id.json"
