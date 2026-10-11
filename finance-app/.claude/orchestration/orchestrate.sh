@@ -28,6 +28,17 @@ STATE_FILE="$PIPELINE/WORKFLOW_STATE.json"
 RESULT_FILE="$PIPELINE/RESULT.json"
 MAX_ATTEMPTS=3
 
+# Model assignment per pipeline role.
+# reviewer-agent uses Haiku (read-only diff scan — no code generation needed).
+# All other roles use Sonnet (code writing, test authoring, planning).
+declare -A AGENT_MODEL=(
+  [spec-agent]="claude-sonnet-4-6"
+  [unit-test-agent]="claude-sonnet-4-6"
+  [dev-agent]="claude-sonnet-4-6"
+  [reviewer-agent]="claude-haiku-4-5-20251001"
+  [e2e-agent]="claude-sonnet-4-6"
+)
+
 FORCE=0
 ARGS=()
 for arg in "$@"; do
@@ -152,8 +163,10 @@ trap append_cost_total EXIT
 # role, prompt, attempt -> runs headless, requires the agent to write $RESULT_FILE
 run_agent() {
   local role="$1" prompt="$2" attempt="${3:-1}"
+  local model="${AGENT_MODEL[$role]:-claude-sonnet-4-6}"
   rm -f "$RESULT_FILE"
   claude -p "$prompt" \
+    --model "$model" \
     --settings "$SETTINGS/${role}.settings.json" \
     --permission-mode acceptEdits \
     --output-format json > "$PIPELINE/.last_${role}.json" || true

@@ -5,6 +5,7 @@ tools:
   - Read
   - Bash
   - Grep
+model: haiku
 ---
 
 You are the **project-guide** for the finance-app. You have two jobs:
