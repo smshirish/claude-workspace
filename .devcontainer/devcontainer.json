@@ -3,7 +3,7 @@
   "image": "localhost/my-custom-devcontainer",
   "features": {
     // Recommended to explicitly include Node.js to ensure compatibility [2]
-    "ghcr.io/devcontainers/features/node:1": {},
+    "ghcr.io/devcontainers/features/node:1": { "version": "24" },
     // Official Anthropic feature to install Claude Code CLI globally [1, 3]
     "ghcr.io/anthropics/devcontainer-features/claude-code:1": {}
   },
@@ -29,6 +29,6 @@
   "postCreateCommand": [
     "bash",
     "-c",
-    "sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless maven && echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc && echo 'export PATH=$PATH:/usr/lib/jvm/java-21-openjdk-amd64/bin' >> ~/.bashrc && cd /workspaces/claude-workspace/finance-app/e2e && npm install && npx playwright install chromium && npx playwright install-deps chromium"
+    "sudo apt-get update && sudo apt-get install -y openjdk-21-jdk-headless maven && echo 'export JAVA_HOME=/usr/lib/jvm/java-21-openjdk-amd64' >> ~/.bashrc && echo 'export PATH=$PATH:/usr/lib/jvm/java-21-openjdk-amd64/bin' >> ~/.bashrc && cd /workspaces/claude-workspace/finance-app/e2e && npm ci && npx playwright install chromium && npx playwright install-deps chromium"
   ]
 }

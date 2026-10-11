@@ -39,7 +39,9 @@
       "Bash(cd /workspaces/claude-workspace/finance-app *)",
       "Bash(git commit -m ' *)",
       "Bash(git checkout *)",
-      "Bash(grep -v \"^commit\\\\|^Author\\\\|^Date\\\\|^Merge\\\\|^$\\\\|^\\\\s\")"
+      "Bash(grep -v \"^commit\\\\|^Author\\\\|^Date\\\\|^Merge\\\\|^$\\\\|^\\\\s\")",
+      "Bash(git -C /workspaces/claude-workspace add finance-app/pipeline/REQUEST_AsOfDateVersioning.md)",
+      "Bash(git -C /workspaces/claude-workspace commit -m ' *)"
     ]
   }
 }
