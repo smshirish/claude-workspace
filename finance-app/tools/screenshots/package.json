@@ -1,0 +1,12 @@
+{
+  "name": "finance-app-screenshots",
+  "version": "1.0.0",
+  "description": "Standalone tool to capture per-feature screenshots of the Finance App",
+  "type": "module",
+  "scripts": {
+    "capture": "node capture.mjs"
+  },
+  "dependencies": {
+    "playwright": "^1.45.0"
+  }
+}

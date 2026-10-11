@@ -241,7 +241,29 @@
 
 ---
 
-## 6. Out of Scope
+## 6. Screenshot Capture
+
+<!-- TEMPLATE: Include this section only if the feature has a UI surface (same condition as §5).
+  For back-end-only features: delete this entire section.
+  This section is the spec for the capture function the E2E agent adds to tools/screenshots/capture.mjs.
+-->
+
+### 6.1 Capture Function
+<!-- TEMPLATE:
+  - Function name: captureFeature[Letter] (e.g. captureFeatureE for the fifth feature)
+  - Output directory: OUT_DIR/[Letter]_[feature_slug] (e.g. E_dashboard_charts)
+  - One row per screenshot — describe the UI state and the filename suffix
+-->
+
+| File | UI state to capture |
+|---|---|
+| `01_[description].png` | [Default / happy-path state] |
+| `02_[description].png` | [Key interaction or variant state] |
+| `03_[description].png` | [Error or edge-case state, if applicable] |
+
+---
+
+## 7. Out of Scope
 
 <!-- TEMPLATE: Explicitly list things that are NOT part of this feature.
   This section prevents scope creep and documents deliberate decisions.
