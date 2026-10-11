@@ -6,7 +6,11 @@ finance-app/e2e/playwright-report/
 finance-app/tools/csv-converter/sample/accounts.xlsx
 finance-app/tools/csv-converter/sample/accounts_converted.csv
 finance-app/tools/csv-converter/sample/accounts.csv
-finance-app/pipeline/
+finance-app/pipeline/WORKFLOW_STATE.json
+finance-app/pipeline/RESULT.json
+finance-app/pipeline/PLAN_*.md
+finance-app/pipeline/REVIEW_*.md
+finance-app/pipeline/.last_*.json
 finance-app/tools/screenshots/node_modules/
 finance-app/tools/screenshots/output/
 finance-app/tools/csv-converter/target/surefire-reports/com.finance.tools.csvconverter.CsvConverterTest.txt
