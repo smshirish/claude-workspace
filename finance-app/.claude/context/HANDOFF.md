@@ -17,6 +17,14 @@ Feature A (Column Sorting) — COMPLETE. Full regression verified 2026-08-30: 96
 
 Feature B (Filter Bar) — **COMPLETE, 2026-08-31.** Reviewer verdict: APPROVE. 109/109 unit/MockMvc tests pass; 46/46 E2E tests pass (`npx playwright test`, all specs including new `account-filter.spec.ts`). See "Feature B — Round 4 Resolution" below.
 
+Feature C (Filtered Total) — **COMPLETE.** Plan: `PLAN_C_FilteredTotal.md`. Reviewer verdict: APPROVE (`REVIEW_C_FilteredTotal.md`). Merged (`dcd6a95 Merge feature/C_FilteredTotal: filtered balance total`).
+
+Feature D (AsOfDate) — **COMPLETE.** Domain model + CSV persistence + two-tier validation for an `asOfDate` field. Plan: `PLAN_D_AsOfDate.md`. Reviewer verdict: APPROVE, round 4 (`REVIEW_D_AsOfDate.md`). E2E specs added (`64ae910`). Merged (`5f91899 Merge origin/feature/D_AsOfDate`).
+
+**No feature currently mid-pipeline** — no `pipeline/WORKFLOW_STATE.json`, no `feature/E_*` branch, no `PLAN_E*.md`.
+
+**Next open feature: `AsOfDateVersioning`** — snapshot versioning with an asOfDate dropdown on the Accounts screen (import stores each asOfDate as an immutable snapshot; re-importing an existing date replaces only that snapshot; UI gets a dropdown to switch snapshots). Dependency (Feature D) is satisfied. Currently only a raw request at `pipeline/REQUEST_AsOfDateVersioning.md` — has NOT been through the Spec stage. Next actionable step: run the Spec Agent / `.claude/orchestration/orchestrate.sh AsOfDateVersioning` to produce `pipeline/PLAN_AsOfDateVersioning.md`, then proceed Test → Dev → Review → E2E.
+
 ## Feature B — Round 4 Resolution (2026-08-31)
 
 Resumed from the parked state below. Fixes applied:
