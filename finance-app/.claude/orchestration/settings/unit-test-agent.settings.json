@@ -2,7 +2,6 @@
   "permissions": {
     "deny": [
       "Edit(src/main/**)",
-      "Write(src/main/**)",
       "Edit(e2e/**)",
       "Write(e2e/**)",
       "Bash(mvn spring-boot:run*)",

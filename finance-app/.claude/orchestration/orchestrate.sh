@@ -1,5 +1,7 @@
 #!/usr/bin/env bash
-# Drives the Spec -> Unit Test -> Dev -> Reviewer -> E2E pipeline for one feature.
+# Drives the Spec -> Unit Test -> E2E Test -> Dev -> Reviewer -> E2E pipeline for one feature.
+# Unit and E2E tests are written and run to failure before any production code exists.
+# Stage order and scope guards are listed in STAGE_ORDER and the guard_* functions below.
 # Each stage runs as a separate headless `claude -p` process with its own
 # settings.deny scope, so guardrails are enforced by the permission system,
 # not by prompt convention.
@@ -34,6 +36,7 @@ MAX_ATTEMPTS=3
 declare -A AGENT_MODEL=(
   [spec-agent]="claude-sonnet-4-6"
   [unit-test-agent]="claude-sonnet-4-6"
+  [e2e-test-agent]="claude-sonnet-4-6"
   [dev-agent]="claude-sonnet-4-6"
   [reviewer-agent]="claude-haiku-4-5-20251001"
   [e2e-agent]="claude-sonnet-4-6"
@@ -64,7 +67,7 @@ write_state() {
 # Canonical pipeline order, used to validate WORKFLOW_STATE.json before each
 # stage actually runs, so a stale/foreign state file can't cause a stage to
 # silently redo already-completed work or skip required prior work.
-STAGE_ORDER=(spec unit_test dev reviewer e2e done)
+STAGE_ORDER=(spec unit_test e2e_test dev reviewer e2e done)
 stage_index() {
   local s="$1" i
   for i in "${!STAGE_ORDER[@]}"; do
@@ -175,6 +178,49 @@ run_agent() {
     log "ERROR: $role exited without writing RESULT.json — see $PIPELINE/.last_${role}.json"
     exit 1
   fi
+  if [[ "$role" == "unit-test-agent" ]]; then guard_test_scope; fi
+  if [[ "$role" == "e2e-test-agent" ]]; then guard_e2e_test_scope; fi
+}
+
+# Unit-test stage may add *Test.java under src/test/java and NEW interface-only
+# stubs under src/main/java. It may not modify existing production files, add
+# non-interface production code, or touch anything else. Checked before commit.
+guard_test_scope() {
+  local line status path bad=""
+  while IFS= read -r line; do
+    status="${line:0:2}"
+    path="${line:3}"
+    case "$path" in
+      finance-app/src/test/java/*Test.java) ;;
+      finance-app/src/main/java/*.java)
+        if [[ "$status" != "??" && "${status:0:1}" != "A" ]]; then
+          bad+="  $path (existing production file changed; only new interface stubs allowed)"$'\n'
+        elif ! grep -qE '^[[:space:]]*(public[[:space:]]+)?interface[[:space:]]' "$REPO_ROOT/$path"; then
+          bad+="  $path (new production file is not an interface stub)"$'\n'
+        fi ;;
+      *) bad+="  $path (outside allowed scope)"$'\n' ;;
+    esac
+  done < <(git -C "$REPO_ROOT" status --porcelain=v1 --untracked-files=all -- finance-app/src)
+  if [[ -n "$bad" ]]; then
+    log "ERROR: unit-test-agent wrote files outside its scope:"
+    printf '%s' "$bad" | while IFS= read -r p; do log "$p"; done
+    log "Stage aborted before commit. Remove or fix these files, then re-run."
+    exit 1
+  fi
+}
+
+# E2E-authoring stage may only add or change files under finance-app/e2e/tests/.
+guard_e2e_test_scope() {
+  local bad
+  bad=$(git -C "$REPO_ROOT" status --porcelain=v1 --untracked-files=all -- finance-app/e2e \
+    | awk '{print $NF}' \
+    | grep -vE '^finance-app/e2e/tests/' || true)
+  if [[ -n "$bad" ]]; then
+    log "ERROR: e2e-test-agent wrote files outside finance-app/e2e/tests/:"
+    while IFS= read -r path; do log "  $path"; done <<< "$bad"
+    log "Stage aborted before commit. Remove or move these files, then re-run."
+    exit 1
+  fi
 }
 
 git rev-parse --verify "$BRANCH" >/dev/null 2>&1 && git checkout -q "$BRANCH" || git checkout -q -b "$BRANCH"
@@ -210,12 +256,23 @@ fi
 # --- Unit Test (write failing tests) ---
 assert_checkpoint "unit_test"
 write_state "unit_test"
-run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $PLAN_FILE section 4 (Test Scenarios).
-Write unit/MockMvc tests for feature $FEATURE, expected to fail (no production code exists yet).
-Run mvn test and confirm the new tests fail for the expected reason, not a compile error.
-Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs written>\"}."
+run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $PLAN_FILE sections 3 (Component Breakdown) and 4 (Test Scenarios).
+Write unit/MockMvc tests for feature $FEATURE, expected to fail. You may create NEW interface-only stubs under src/main/java where a test needs a type to compile; no implementations, no existing production files modified.
+Run mvn test and confirm the new tests fail for the expected reason (missing behaviour), not a compile error caused by a missing type.
+Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs and stub interfaces written>\"}."
 [[ "$(result_field result)" == "PASS" ]] || { log "unit_test stage failed: $(result_field summary)"; exit 1; }
-commit_stage "test: add failing tests for $FEATURE"
+commit_stage "test: add failing unit tests and interface stubs for $FEATURE"
+
+# --- E2E authoring (write Playwright specs, run to failure) ---
+assert_checkpoint "e2e_test"
+write_state "e2e_test"
+run_agent "e2e-test-agent" "Follow .claude/rules/e2e.md, authoring stage only. Read $PLAN_FILE sections 5 (E2E Test Plan) and 6 (Screenshot Capture plan).
+Write Playwright specs for feature $FEATURE under e2e/tests/ ONLY. Do not touch src/, tools/, package.json or playwright.config.ts.
+Start the backend (bin/start.sh, background) if not already running, run \`source bin/env.sh\` so ADMIN_PASSWORD is set, then run the new specs from e2e/ with npx playwright test.
+The new specs must FAIL because the feature is not implemented yet. A spec that fails because of a typo, bad selector syntax or a missing helper is a defect: fix it and rerun.
+Write $RESULT_FILE as {\"stage\":\"e2e_test\",\"result\":\"PASS|FAIL\",\"summary\":\"PASS means specs ran and all new specs failed for expected reasons; include counts\"}."
+[[ "$(result_field result)" == "PASS" ]] || { log "e2e_test stage failed: $(result_field summary)"; exit 1; }
+commit_stage "test(e2e): add failing e2e specs for $FEATURE"
 
 # --- Dev (retry loop) ---
 assert_checkpoint "dev"
@@ -225,7 +282,10 @@ while true; do
   attempt=$((attempt + 1))
   write_state "dev" "$attempt"
   run_agent "dev-agent" "Follow .claude/rules/dev.md. Read $PLAN_FILE sections 1-3.
-Implement production code so all tests for feature $FEATURE pass. Run mvn test to verify.
+Implement production code under src/main/java so that BOTH pass:
+  1. all unit tests for feature $FEATURE (mvn test), and
+  2. all new E2E specs for $FEATURE (start bin/start.sh in background, run \`source bin/env.sh\`, then from e2e/: npx playwright test).
+Do not edit tests or e2e specs to make them pass.
 $feedback
 Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "$attempt"
   if [[ "$(result_field result)" == "PASS" ]]; then
@@ -275,7 +335,9 @@ done
 assert_checkpoint "e2e"
 write_state "e2e"
 run_agent "e2e-agent" "Follow .claude/rules/e2e.md. Read $PLAN_FILE section 5.
-Start the backend (bin/start.sh, background) if not already running, then write/run Playwright specs for $FEATURE (run `source bin/env.sh` first so ADMIN_PASSWORD is set).
+Final E2E run for $FEATURE. The specs were written before Dev and Dev has made them pass; run the full feature suite plus any existing specs touched by this feature.
+Start the backend (bin/start.sh, background) if not already running, run \`source bin/env.sh\` first so ADMIN_PASSWORD is set, then run from e2e/ with npx playwright test.
+If a spec still fails, fix the spec under e2e/tests/ ONLY and rerun. If the failure is caused by the app, do not change src/: report it as FAIL.
 Write $RESULT_FILE as {\"stage\":\"e2e\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, e.g. 8/8 passed>\"}."
 commit_stage "test(e2e): add e2e specs for $FEATURE"
 if [[ "$(result_field result)" != "PASS" ]]; then

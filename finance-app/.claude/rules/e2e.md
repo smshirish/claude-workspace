@@ -11,3 +11,7 @@ After writing the Playwright tests, add a corresponding capture function to `too
 3. Output directory: `path.join(OUT_DIR, 'X_feature_name')` — use the same letter prefix as the feature (A, B, C, …).
 - Do NOT modify `package.json`, `playwright.config.ts`, or any existing capture function.
 - For back-end-only features with no UI surface, skip this step.
+
+## Authoring stage (e2e-test-agent, runs BEFORE Dev)
+- Write specs under e2e/tests/ ONLY. Do not touch src/, tools/, package.json or playwright.config.ts.
+- Run the specs and confirm they fail for the expected reason (feature missing). Do not add the screenshot capture function in this stage; that happens in the final E2E stage.

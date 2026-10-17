@@ -1,0 +1,30 @@
+{
+  "permissions": {
+    "deny": [
+      "Edit(src/**)",
+      "Write(src/**)",
+      "Edit(tools/**)",
+      "Write(tools/**)",
+      "Edit(e2e/package.json)",
+      "Write(e2e/package.json)",
+      "Edit(e2e/playwright.config.ts)",
+      "Write(e2e/playwright.config.ts)",
+      "Bash(mvn spring-boot:run*)",
+      "Bash(git commit*)",
+      "Bash(git push*)",
+      "Bash(git merge*)"
+    ],
+    "allow": [
+      "Bash(bin/start.sh*)",
+      "Bash(source bin/env.sh*)",
+      "Bash(cd e2e && npx *)",
+      "Bash(npx playwright*)",
+      "Bash(curl *localhost*)",
+      "Bash(sleep *)",
+      "Bash(lsof *)",
+      "Bash(kill *)",
+      "Bash(pkill *)"
+    ],
+    "defaultMode": "acceptEdits"
+  }
+}
