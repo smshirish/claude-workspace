@@ -192,6 +192,104 @@ async function captureCsvValidation(page) {
   await shot(page, dir, '02_row_error_invalid_balance.png');
 }
 
+async function capturePortfolioView(page) {
+  const dir = path.join(OUT_DIR, 'E_portfolio_view');
+  ensureDir(dir);
+  console.log('\n[E] Portfolio View');
+
+  const IBKR_HEADER = 'Account ID,Symbol,Asset Class,Quantity,Price,Market Value,Currency,Report Date,Cost Basis,Unrealized P&L';
+  const portfolioDir = path.join(os.homedir(), '.finance-app', 'data', 'portfolio');
+
+  function cleanPortfolioDir() {
+    if (fs.existsSync(portfolioDir)) {
+      fs.rmSync(portfolioDir, { recursive: true, force: true });
+    }
+  }
+
+  async function importPortfolioFixture(csvContent) {
+    const { file, cleanup } = writeTempCsv(csvContent);
+    try {
+      await page.goto(`${BASE_URL}/portfolio`);
+      await page.setInputFiles('[data-testid="portfolio-file-input"]', file);
+      await page.click('[data-testid="portfolio-import-button"]');
+      await page.waitForLoadState('networkidle');
+    } finally {
+      cleanup();
+    }
+  }
+
+  const today = new Date();
+  const recentDate = new Date(today);
+  recentDate.setDate(today.getDate() - 7);
+  const staleDate = new Date(today);
+  staleDate.setDate(today.getDate() - 20);
+  const fmtDate = (d) => d.toISOString().slice(0, 10);
+
+  const VALID_CSV = [
+    IBKR_HEADER,
+    `U1234567,AAPL,STK,10,150.00,1500.00,USD,${fmtDate(recentDate)},1200.00,300.00`,
+    `U1234567,MSFT,STK,5,150.00,750.00,USD,${fmtDate(recentDate)},700.00,50.00`,
+    `U1234567,TSLA,STK,3,100.00,300.00,USD,${fmtDate(recentDate)},350.00,-50.00`,
+  ].join('\n');
+
+  const STALE_CSV = [
+    IBKR_HEADER,
+    `U1234567,AAPL,STK,10,150.00,1500.00,USD,${fmtDate(staleDate)},1200.00,300.00`,
+  ].join('\n');
+
+  const FILTER_CSV = [
+    IBKR_HEADER,
+    `U1234567,AAPL,STK,10,150.00,1500.00,USD,${fmtDate(recentDate)},1200.00,300.00`,
+    `U1234567,AAPL,OPT,5,20.00,100.00,USD,${fmtDate(recentDate)},80.00,20.00`,
+    `U1234567,MSFT,STK,5,150.00,750.00,USD,${fmtDate(recentDate)},700.00,50.00`,
+    `U1234567,USD,CASH,10000,1.00,10000.00,USD,${fmtDate(recentDate)},,`,
+  ].join('\n');
+
+  const MISSING_COLUMN_CSV = [
+    'Account ID,Symbol,Asset Class,Quantity,Price,Currency,Report Date,Cost Basis,Unrealized P&L',
+    `U1234567,AAPL,STK,10,150.00,USD,${fmtDate(recentDate)},1200.00,300.00`,
+  ].join('\n');
+
+  // 01: empty state — no snapshot on disk
+  cleanPortfolioDir();
+  await page.goto(`${BASE_URL}/portfolio`);
+  await page.waitForLoadState('networkidle');
+  await shot(page, dir, '01_empty_state.png');
+
+  // 02: table default — Symbol ASC, as-of date, total in footer
+  await importPortfolioFixture(VALID_CSV);
+  await page.goto(`${BASE_URL}/portfolio`);
+  await page.waitForLoadState('networkidle');
+  await shot(page, dir, '02_table_default.png');
+
+  // 03: stale warning — snapshot older than 14 days
+  cleanPortfolioDir();
+  await importPortfolioFixture(STALE_CSV);
+  await page.goto(`${BASE_URL}/portfolio`);
+  await page.waitForLoadState('networkidle');
+  await shot(page, dir, '03_stale_warning.png');
+
+  // 04: filtered — symbol=aapl shows 2 rows with filtered total
+  cleanPortfolioDir();
+  await importPortfolioFixture(FILTER_CSV);
+  await page.fill('[data-testid="portfolio-filter-symbol-input"]', 'aapl');
+  await page.click('[data-testid="portfolio-filter-submit-button"]');
+  await page.waitForLoadState('networkidle');
+  await shot(page, dir, '04_filtered.png');
+
+  // 05: schema error — missing Market Value column
+  await page.goto(`${BASE_URL}/portfolio`);
+  const { file: badFile, cleanup: badCleanup } = writeTempCsv(MISSING_COLUMN_CSV);
+  try {
+    await page.setInputFiles('[data-testid="portfolio-file-input"]', badFile);
+    await page.click('[data-testid="portfolio-import-button"]');
+    await page.waitForLoadState('networkidle');
+  } finally {
+    badCleanup();
+  }
+  await shot(page, dir, '05_schema_error.png');
+}
+
 async function captureDashboard(page) {
   const dir = path.join(OUT_DIR, 'dashboard');
   ensureDir(dir);
@@ -220,6 +318,7 @@ await captureFilteredTotal(page);
 await captureAsOfDate(page);
 await captureCsvImport(page);
 await captureCsvValidation(page);
+await capturePortfolioView(page);
 
 await browser.close();
 console.log(`\nDone. Screenshots saved to: ${OUT_DIR}`);
