@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" lang="en">
+<head>
+    <meta charset="UTF-8"/>
+    <title>Finance App — Portfolio</title>
+    <link rel="stylesheet" th:href="@{/css/style.css}"/>
+</head>
+<body>
+
+<header th:replace="~{fragments/nav :: nav('portfolio')}"></header>
+
+<main class="app-main">
+<h1 class="page-title">Portfolio</h1>
+
+<div th:if="${importSuccess}" class="alert-banner alert-banner--success"
+     data-testid="portfolio-import-success">
+    <p th:text="${importSuccess}"></p>
+</div>
+
+<div th:if="${schemaError}" class="alert-banner alert-banner--error"
+     data-testid="schema-error-banner">
+    <p th:text="${schemaError}"></p>
+</div>
+
+<div th:if="${rowErrors}" class="alert-banner alert-banner--error"
+     data-testid="row-errors-banner">
+    <ul>
+        <li th:each="err : ${rowErrors}"
+            th:text="|Row ${err.rowNumber}, '${err.column}': ${err.message}|"
+            th:attr="data-testid='row-error-' + ${err.rowNumber}">
+        </li>
+    </ul>
+</div>
+
+<div th:if="${importError}" class="alert-banner alert-banner--error"
+     data-testid="portfolio-import-error">
+    <p th:text="${importError}"></p>
+</div>
+
+<form class="import-form" method="post" th:action="@{/portfolio/import}" enctype="multipart/form-data"
+      data-testid="portfolio-import-form">
+    <input type="file" name="file" accept=".csv" data-testid="portfolio-file-input"/>
+    <button type="submit" class="btn-import" data-testid="portfolio-import-button">Import CSV</button>
+</form>
+
+<div th:if="${asOfDate}" class="portfolio-asof">
+    <span th:text="|Portfolio as of ${asOfDate}|" data-testid="portfolio-asof-date"></span>
+    <span th:if="${isStale}" class="stale-warning" data-testid="portfolio-stale-warning">
+        Stale data</span>
+</div>
+
+<form method="get" th:action="@{/portfolio}" data-testid="portfolio-filter-form" class="filter-form">
+    <input type="hidden" name="sortField" th:value="${activeSortField}"/>
+    <input type="hidden" name="sortDir" th:value="${activeSortDir}"/>
+    <input type="text" name="symbol" th:value="${filterSymbol}"
+           placeholder="Symbol" data-testid="portfolio-filter-symbol-input"/>
+    <input type="text" name="assetClass" th:value="${filterAssetClass}"
+           placeholder="Asset Class" data-testid="portfolio-filter-assetClass-input"/>
+    <button type="submit" data-testid="portfolio-filter-submit-button">Filter</button>
+    <a th:href="${clearFilterUrl}" data-testid="portfolio-filter-clear-link">Clear</a>
+</form>
+
+<div th:if="${emptyState}" class="empty-state" data-testid="portfolio-empty-state">
+    <p>No portfolio data to display. Upload a CSV file to get started.</p>
+</div>
+
+<div th:unless="${emptyState}" class="accounts-table-wrapper">
+<table class="accounts-table" data-testid="portfolio-table">
+    <thead>
+    <tr>
+        <th><a data-testid="sort-symbol"
+               th:href="@{/portfolio(sortField='symbol',sortDir=${activeSortField == 'symbol' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'},symbol=${filterSymbol},assetClass=${filterAssetClass})}">Symbol<span
+                th:if="${activeSortField == 'symbol' || activeSortField == ''}"
+                th:text="${(activeSortField == 'symbol' and activeSortDir == 'desc') ? ' ↓' : ' ↑'}"></span></a></th>
+        <th><a data-testid="sort-assetClass"
+               th:href="@{/portfolio(sortField='assetClass',sortDir=${activeSortField == 'assetClass' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'},symbol=${filterSymbol},assetClass=${filterAssetClass})}">Asset Class<span
+                th:if="${activeSortField == 'assetClass'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
+        <th>Quantity</th>
+        <th>Price</th>
+        <th><a data-testid="sort-marketValue"
+               th:href="@{/portfolio(sortField='marketValue',sortDir=${activeSortField == 'marketValue' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'},symbol=${filterSymbol},assetClass=${filterAssetClass})}">Market Value<span
+                th:if="${activeSortField == 'marketValue'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
+        <th>Currency</th>
+        <th>Cost Basis</th>
+        <th><a data-testid="sort-unrealizedPnl"
+               th:href="@{/portfolio(sortField='unrealizedPnl',sortDir=${activeSortField == 'unrealizedPnl' ? (activeSortDir == 'asc' ? 'desc' : 'asc') : 'asc'},symbol=${filterSymbol},assetClass=${filterAssetClass})}">Unrealized P&amp;L<span
+                th:if="${activeSortField == 'unrealizedPnl'}"
+                th:text="${activeSortDir == 'asc' ? ' ↑' : ' ↓'}"></span></a></th>
+        <th>Report Date</th>
+        <th>Account ID</th>
+    </tr>
+    </thead>
+    <tbody>
+    <tr th:each="p, pStat : ${positions}" th:attr="data-testid='portfolio-row-' + ${pStat.index}">
+        <td th:text="${p.symbol()}"></td>
+        <td th:text="${p.assetClass()}"></td>
+        <td th:text="${p.quantity()}"></td>
+        <td th:text="${p.price()}"></td>
+        <td th:text="${p.marketValue()}"></td>
+        <td th:text="${p.currency()}"></td>
+        <td th:text="${p.costBasis() != null ? p.costBasis() : ''}"></td>
+        <td th:text="${p.unrealizedPnl() != null ? p.unrealizedPnl() : ''}"></td>
+        <td th:text="${p.reportDate()}"></td>
+        <td th:text="${p.accountId()}"></td>
+    </tr>
+    </tbody>
+    <tfoot>
+    <tr>
+        <td colspan="4"></td>
+        <td th:text="${totalMarketValue}" data-testid="portfolio-total-market-value"></td>
+        <td colspan="5"></td>
+    </tr>
+    </tfoot>
+</table>
+</div>
+
+</main>
+
+</body>
+</html>
