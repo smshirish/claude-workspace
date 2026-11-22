@@ -27,6 +27,8 @@ mkdir -p "$PIPELINE"
 STATE_FILE="$PIPELINE/WORKFLOW_STATE.json"
 RESULT_FILE="$PIPELINE/RESULT.json"
 MAX_ATTEMPTS=3
+# Dev attempts per review-fix round (worst case: 3 rounds x 2 = 6 extra dev calls).
+MAX_FIX_ATTEMPTS=2
 
 # Model assignment per pipeline role.
 # reviewer-agent uses Haiku (read-only diff scan — no code generation needed).
@@ -221,28 +223,37 @@ Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summar
 [[ "$(result_field result)" == "PASS" ]] || { log "unit_test stage failed: $(result_field summary)"; exit 1; }
 commit_stage "test: add failing tests for $FEATURE"
 
+# Runs dev-agent until it reports PASS, up to <max> attempts. Commits on PASS;
+# exits 2 (escalate to human) on exhaustion. Shared by the main Dev stage and
+# the review-fix loop so the reviewer only ever sees green code.
+#   run_dev_until_green <base_prompt> <commit_msg> <max_attempts> <label>
+run_dev_until_green() {
+  local base_prompt="$1" commit_msg="$2" max="$3" label="$4"
+  local attempt=0 feedback=""
+  while true; do
+    attempt=$((attempt + 1))
+    write_state "dev" "$attempt"
+    run_agent "dev-agent" "$base_prompt
+$feedback
+Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "${label}${attempt}"
+    if [[ "$(result_field result)" == "PASS" ]]; then
+      commit_stage "$commit_msg (attempt $attempt)"
+      return 0
+    fi
+    if (( attempt >= max )); then
+      log "dev (${label:-main}) failed after $max attempts: $(result_field summary) — escalating to human"
+      exit 2
+    fi
+    feedback="Previous attempt failed: $(result_field summary). Fix the specific failing tests, do not restart from scratch."
+    log "dev (${label:-main}) attempt $attempt failed, retrying"
+  done
+}
+
 # --- Dev (retry loop) ---
 assert_checkpoint "dev"
-attempt=0
-feedback=""
-while true; do
-  attempt=$((attempt + 1))
-  write_state "dev" "$attempt"
-  run_agent "dev-agent" "Follow .claude/rules/dev.md. Read $PLAN_FILE sections 1-3.
-Implement production code so all tests for feature $FEATURE pass. Run mvn test to verify.
-$feedback
-Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "$attempt"
-  if [[ "$(result_field result)" == "PASS" ]]; then
-    commit_stage "feat: implement $FEATURE (attempt $attempt)"
-    break
-  fi
-  if (( attempt >= MAX_ATTEMPTS )); then
-    log "dev stage failed after $MAX_ATTEMPTS attempts: $(result_field summary) — escalating to human"
-    exit 2
-  fi
-  feedback="Previous attempt failed: $(result_field summary). Fix the specific failing tests, do not restart from scratch."
-  log "dev attempt $attempt failed, retrying"
-done
+run_dev_until_green "Follow .claude/rules/dev.md. Read $PLAN_FILE sections 1-3.
+Implement production code so all tests for feature $FEATURE pass. Run mvn test to verify." \
+  "feat: implement $FEATURE" "$MAX_ATTEMPTS" ""
 
 # --- Reviewer (retry loop: REQUEST_CHANGES -> encode as tests -> Dev fixes) ---
 assert_checkpoint "reviewer"
@@ -267,12 +278,14 @@ Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary
   run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $REVIEW_FILE.
 For every blocking [CRITICAL]/[HIGH] issue describing a correctness or behavior gap, add or strengthen tests in src/test/java that encode the correct expected behavior. Do not modify src/main/java. mvn test may legitimately fail against the current (buggy) implementation — that is expected.
 Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs added/changed>\"}." "$round"
+  if [[ "$(result_field result)" != "PASS" ]]; then
+    log "unit_test (review round $round) failed: $(result_field summary) — likely a plan/harness problem, stopping"
+    exit 1
+  fi
   commit_stage "test: encode review feedback for $FEATURE (round $round)"
-  write_state "dev" "$round"
-  run_agent "dev-agent" "Follow .claude/rules/dev.md. Reviewer requested changes, see $REVIEW_FILE.
-Address every point, then run mvn test.
-Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "$round"
-  commit_stage "fix: address review feedback for $FEATURE (round $round)"
+  run_dev_until_green "Follow .claude/rules/dev.md. Reviewer requested changes, see $REVIEW_FILE.
+Address every point, then run mvn test." \
+    "fix: address review feedback for $FEATURE (round $round)" "$MAX_FIX_ATTEMPTS" "r${round}."
 done
 
 # --- E2E ---

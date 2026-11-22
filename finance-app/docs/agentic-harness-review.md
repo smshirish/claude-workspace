@@ -41,6 +41,7 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 - Inside the reviewer `while` loop, the follow-up `unit-test-agent` and `dev-agent` calls write `RESULT.json`, but the script never reads `result_field result`. It commits and goes straight to the next reviewer round.
 - If Dev returns FAIL (tests red), the reviewer still reviews broken code and the commit history shows a "fix" that doesn't build.
 - **Fix:** check the result after each call. On a Dev FAIL, run the same bounded Dev retry used in the main stage before returning to the reviewer.
+- **Status: FIXED (Option A).** Added a shared `run_dev_until_green()` used by the main Dev stage and the review-fix loop. The review-loop unit-test result is now checked (FAIL → `exit 1`). Review-fix attempts are capped by `MAX_FIX_ATTEMPTS=2`. Verified with a stubbed `claude` (dev fails once, reviewer requests changes once → completes correctly).
 
 ### 3. E2E commits before checking result — MEDIUM
 - `commit_stage "test(e2e): ..."` runs before the PASS/FAIL check, so failing specs get committed.
