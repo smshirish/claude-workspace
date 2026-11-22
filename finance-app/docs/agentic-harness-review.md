@@ -35,6 +35,7 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 - The `requirements-agent` (according to the root `project-guide.md`) writes `pipeline/REQUEST_<Feature>.md`.
 - The next feature's request is in fact at `pipeline/REQUEST_AsOfDateVersioning.md`, so `orchestrate.sh AsOfDateVersioning` will exit with "Neither PLAN nor REQUEST exists".
 - **Fix:** standardise on one path. Agents can't write to `.claude/**` in headless mode, so use `pipeline/REQUEST_*.md` and have the orchestrator copy it into `$CTX` for the permanent record, the same way it handles PLAN and REVIEW.
+- **Status: FIXED (Option A).** The orchestrator reads `pipeline/REQUEST_*.md` and archives a copy to `.claude/context/` after spec PASS. All paths in `requirements-agent.md` now point to `pipeline/`.
 
 ### 2. Review-loop stage results never checked — HIGH
 - Inside the reviewer `while` loop, the follow-up `unit-test-agent` and `dev-agent` calls write `RESULT.json`, but the script never reads `result_field result`. It commits and goes straight to the next reviewer round.

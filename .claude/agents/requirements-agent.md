@@ -62,7 +62,7 @@ Dependencies: <features that must be in place first, from projectplan.md, or "No
 Once the user confirms (or after minor corrections), write the file to:
 
 ```
-finance-app/.claude/context/REQUEST_<FeatureName>.md
+finance-app/pipeline/REQUEST_<FeatureName>.md
 ```
 
 **Before writing, check whether `finance-app/.claude/context/PLAN_<FeatureName>.md` already exists.**
@@ -99,7 +99,7 @@ Use this format:
 After writing, output exactly:
 
 ```
-Written: finance-app/.claude/context/REQUEST_<FeatureName>.md
+Written: finance-app/pipeline/REQUEST_<FeatureName>.md
 
 Next step:
   cd finance-app && .claude/orchestration/orchestrate.sh <FeatureName>
@@ -113,5 +113,5 @@ Next step:
 - Keep questions short — this is used from a phone.
 - Do not invent requirements. If something is unclear, flag it with `[NEEDS CLARIFICATION]` in the file rather than guessing.
 - Do not start the pipeline yourself — just write the file and show the command.
-- Do not edit any file other than `.claude/context/REQUEST_<FeatureName>.md`.
+- Do not edit any file other than `pipeline/REQUEST_<FeatureName>.md`.
 - Never delete an existing PLAN file yourself — surface the conflict and let the user decide.

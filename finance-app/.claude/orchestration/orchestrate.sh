@@ -180,7 +180,10 @@ run_agent() {
 git rev-parse --verify "$BRANCH" >/dev/null 2>&1 && git checkout -q "$BRANCH" || git checkout -q -b "$BRANCH"
 
 # --- Spec ---
-REQUEST_FILE="$CTX/REQUEST_${FEATURE}.md"
+# Agents write REQUEST files to $PIPELINE (headless writes to .claude/** are
+# blocked); the orchestrator archives a copy into $CTX after a successful spec.
+REQUEST_FILE="$PIPELINE/REQUEST_${FEATURE}.md"
+ARCHIVED_REQUEST_FILE="$CTX/REQUEST_${FEATURE}.md"
 if [[ ! -f "$PLAN_FILE" ]]; then
   if [[ ! -f "$REQUEST_FILE" ]]; then
     log "Neither $PLAN_FILE nor $REQUEST_FILE exists."
@@ -202,6 +205,7 @@ EOF
   run_agent "spec-agent" "$spec_prompt"
   [[ "$(result_field result)" == "PASS" ]] || { log "spec stage failed: $(result_field summary)"; exit 1; }
   cp "$DRAFT_PLAN_FILE" "$PLAN_FILE"
+  cp "$REQUEST_FILE" "$ARCHIVED_REQUEST_FILE"
   commit_stage "spec: draft $PLAN_FILE from $REQUEST_FILE"
 else
   log "$PLAN_FILE already exists, skipping spec stage"
