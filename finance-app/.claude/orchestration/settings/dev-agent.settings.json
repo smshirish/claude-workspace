@@ -1,13 +1,19 @@
 {
   "permissions": {
     "deny": [
-      "Edit(src/test/**)",
-      "Write(src/test/**)",
-      "Edit(e2e/**)",
-      "Write(e2e/**)",
       "Bash(git commit*)",
+      "Bash(git merge*)",
+      "Bash(git push *)",
       "Bash(git push*)",
-      "Bash(git merge*)"
+      "Edit(e2e/**)",
+      "Edit(src/test/**)",
+      "Read(**/*secrets*.env)",
+      "Read(**/RealToAnonymIds.json)",
+      "Read(**/anonym_to_real_id.json)",
+      "Read(**/e2e/data/accounts_v1.csv)",
+      "Read(**/local/**)",
+      "Write(e2e/**)",
+      "Write(src/test/**)"
     ],
     "allow": [
       "Bash(mvn test*)",

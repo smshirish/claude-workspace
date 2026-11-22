@@ -23,3 +23,7 @@ finance-app/local/
 # Sensitive data — never commit
 finance-app/e2e/data/RealToAnonymIds.json
 finance-app/e2e/data/accounts_v1.csv
+
+# Claude Code personal settings (per-machine "don't ask again" approvals) — shared rules live in .claude/settings.json
+.claude/settings.local.json
+**/.claude/settings.local.json

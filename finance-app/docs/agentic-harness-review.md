@@ -91,11 +91,20 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
   - `Bash(git commit -m ' *)`, `Bash(git checkout *)` and `Bash(git add *)` at the top level
 - It also contains broad allows: `Bash(curl *)` (unrestricted network egress) and `Bash(cd /workspaces/claude-workspace/finance-app *)`, which effectively allows any command prefixed with `cd`.
 - **Fix:** `git rm --cached .claude/settings.local.json`, add it to `.gitignore`, and rebuild a minimal list of allows by hand.
+- **Status: FIXED (Option B, with #8).**
+  - The file is untracked and gitignored (`**/.claude/settings.local.json`).
+  - A cleaned personal version was handed over separately.
 
 ### 8. No shared `.claude/settings.json` — MEDIUM
 - There is no project-level settings file in either `.claude/` directory, so the baseline rules (deny `git push`, deny reading `local/`, `e2e/data/accounts_v1.csv` and secrets, allow `mvn test`, `npx playwright test`) exist only in the per-role orchestrator files or in the personal local file.
 - **Fix:** add a committed `finance-app/.claude/settings.json` with shared allows and denies. Keep the per-role settings as overlays for the pipeline.
 - Also consider adding `Read` denies for the sensitive paths already listed in `.gitignore` (`local/`, `RealToAnonymIds.json`, `anonym_to_real_id.json`). `.claudeignore` isn't an enforced control.
+- **Status: FIXED (with #7).**
+  - Added a committed root `.claude/settings.json`:
+    - allow: mvn test/compile, playwright, `bin/start.sh` / `stop.sh`, read-only git, `curl` to localhost only
+    - deny: `git push`, and Read/Edit of `local/**`, the real CSV, the ID-mapping files and `*secrets*.env`
+  - The same sensitive-file `Read` denies (plus `git push`) were added to every pipeline role's settings, since the pipeline runs headless from `finance-app/`.
+  - Caveat: `Read` denies don't stop a shell command such as `cat`. They block Claude's file tools only.
 
 ---
 

@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json.schemastore.org/claude-code-settings.json",
+  "permissions": {
+    "allow": [
+      "Bash(mvn test *)",
+      "Bash(mvn test)",
+      "Bash(mvn -q test *)",
+      "Bash(mvn compile *)",
+      "Bash(mvn -q compile *)",
+      "Bash(mvn clean compile *)",
+      "Bash(mvn test-compile *)",
+      "Bash(mvn -f finance-app/pom.xml *)",
+      "Bash(npx playwright test *)",
+      "Bash(npx playwright test)",
+      "Bash(bin/start.sh)",
+      "Bash(bin/stop.sh)",
+      "Bash(finance-app/bin/start.sh)",
+      "Bash(finance-app/bin/stop.sh)",
+      "Bash(curl http://localhost:*)",
+      "Bash(curl -s http://localhost:*)",
+      "Bash(curl -sS http://localhost:*)",
+      "Bash(git status *)",
+      "Bash(git status)",
+      "Bash(git diff *)",
+      "Bash(git diff)",
+      "Bash(git log *)",
+      "Bash(git show *)",
+      "Bash(git branch)",
+      "Bash(jq *)"
+    ],
+    "deny": [
+      "Bash(git push *)",
+      "Bash(git push)",
+      "Read(**/local/**)",
+      "Edit(**/local/**)",
+      "Write(**/local/**)",
+      "Read(**/e2e/data/accounts_v1.csv)",
+      "Read(**/RealToAnonymIds.json)",
+      "Read(**/anonym_to_real_id.json)",
+      "Read(**/*secrets*.env)",
+      "Edit(**/*secrets*.env)"
+    ]
+  }
+}

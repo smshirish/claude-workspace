@@ -1,13 +1,19 @@
 {
   "permissions": {
     "deny": [
-      "Edit(src/main/**)",
-      "Write(src/main/**)",
-      "Edit(src/test/**)",
-      "Write(src/test/**)",
       "Bash(git commit*)",
+      "Bash(git merge*)",
+      "Bash(git push *)",
       "Bash(git push*)",
-      "Bash(git merge*)"
+      "Edit(src/main/**)",
+      "Edit(src/test/**)",
+      "Read(**/*secrets*.env)",
+      "Read(**/RealToAnonymIds.json)",
+      "Read(**/anonym_to_real_id.json)",
+      "Read(**/e2e/data/accounts_v1.csv)",
+      "Read(**/local/**)",
+      "Write(src/main/**)",
+      "Write(src/test/**)"
     ],
     "allow": [
       "Bash(mvn spring-boot:run*)",
