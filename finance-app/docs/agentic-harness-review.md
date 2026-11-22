@@ -64,6 +64,14 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 - After `exit 2` (Dev or Reviewer max attempts), finishing is entirely manual; this is what happened with Feature B, round 4.
 - `--force` bypasses every checkpoint, but there is no "resume from stage X" option.
 - **Fix:** add `--from <stage>`. It would validate that state shows that stage, or the one just before it, and reset the attempt counter. Record the escalation reason in `WORKFLOW_STATE.json`.
+- **Status: FIXED (Option C).**
+  - `--resume` restarts at the recorded stage. `--from <stage>` restarts at a stage you choose, which must be at or before the recorded one unless `--force`.
+  - Earlier stages are skipped, and attempt counters reset.
+  - Review-fix rounds record stage `reviewer`, so resuming restarts the review loop rather than the main Dev stage.
+  - On every exit, the state file records `status` (running/escalated/failed/infra_error/done), `exit_code`, `step`, `last_role`, `last_result`, `last_summary` and `updated_at`.
+  - The COST table gets a Result column.
+  - Verified with 7 stub scenarios.
+  - Note: resuming at `reviewer` after a failed review fix reviews the current code. Fix the tests first.
 
 ### Minor orchestrator notes
 - `cp "$DRAFT_REVIEW_FILE" "$REVIEW_FILE"` aborts the script (`set -e`) with a confusing error if the reviewer didn't write the draft. Guard it with an explicit check and log message.

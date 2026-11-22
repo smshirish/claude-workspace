@@ -4,16 +4,19 @@
 # settings.deny scope, so guardrails are enforced by the permission system,
 # not by prompt convention.
 #
-# Usage: orchestrate.sh <FeatureName> [--force|-f]
+# Usage: orchestrate.sh <FeatureName> [--resume | --from <stage>] [--force|-f]
+#   --resume        restart at the stage recorded in WORKFLOW_STATE.json (fresh attempts)
+#   --from <stage>  restart at <stage> (spec|unit_test|dev|reviewer|e2e); must be at or
+#                   before the recorded stage unless --force. Earlier stages are skipped.
 # Env: MAX_TURNS=<n> (override all per-role turn caps), AGENT_TIMEOUT=<dur> (default 30m)
 # Exit codes: 0 done, 1 stage failed, 2 escalate to human, 3 checkpoint mismatch,
 #             4 infrastructure failure (auth/network/rate limit) — retry later
 # Before each stage, WORKFLOW_STATE.json (if present) is checked to confirm
 # this feature/branch is at or just before that stage — this catches stale
 # state left over from an escalated run (exit 2) or a state file for a
-# different feature. --force/-f skips that check, for deliberately re-running
-# or skipping ahead to a single stage (e.g. resuming manually after fixing an
-# issue outside the stages the automated retry loop can reach).
+# different feature. --force/-f skips that check (and --from's ordering check).
+# On every exit WORKFLOW_STATE.json records status (running|escalated|failed|
+# infra_error|done), exit_code and the last agent's role/result/summary.
 set -euo pipefail
 
 REPO_ROOT="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
@@ -56,14 +59,24 @@ declare -A AGENT_MAX_TURNS=(
 AGENT_TIMEOUT="${AGENT_TIMEOUT:-30m}"
 
 FORCE=0
+RESUME=0
+FROM_STAGE=""
 ARGS=()
-for arg in "$@"; do
-  case "$arg" in
+while (( $# )); do
+  case "$1" in
     --force|-f) FORCE=1 ;;
-    *) ARGS+=("$arg") ;;
+    --resume) RESUME=1 ;;
+    --from) FROM_STAGE="${2:?--from needs a stage}"; shift ;;
+    --from=*) FROM_STAGE="${1#--from=}" ;;
+    *) ARGS+=("$1") ;;
   esac
+  shift
 done
-FEATURE="${ARGS[0]:?Usage: orchestrate.sh <FeatureName> [--force]}"
+USAGE="Usage: orchestrate.sh <FeatureName> [--resume | --from <stage>] [--force]"
+FEATURE="${ARGS[0]:?$USAGE}"
+if (( RESUME )) && [[ -n "$FROM_STAGE" ]]; then
+  echo "[orchestrator] ERROR: use either --resume or --from, not both" >&2; exit 3
+fi
 PLAN_FILE="$CTX/PLAN_${FEATURE}.md"
 REVIEW_FILE="$CTX/REVIEW_${FEATURE}.md"
 DRAFT_PLAN_FILE="$PIPELINE/PLAN_${FEATURE}.md"
@@ -72,9 +85,24 @@ BRANCH="feature/${FEATURE}"
 
 log() { printf '[orchestrator] %s\n' "$*"; }
 
+# Current position + last agent outcome; persisted by write_state().
+CUR_STAGE="" CUR_STEP="" CUR_ATTEMPT=0
+LAST_ROLE="" LAST_RESULT="" LAST_SUMMARY=""
+# Set to 1 before exits that must NOT touch the state file (e.g. it belongs to
+# another feature).
+KEEP_STATE=0
+
+# write_state <stage> [attempt] [step] [status] [exit_code]
 write_state() {
-  jq -n --arg f "$FEATURE" --arg s "$1" --argjson a "${2:-0}" --arg b "$BRANCH" \
-    '{feature:$f, stage:$s, attempt:$a, max_attempts:'"$MAX_ATTEMPTS"', branch:$b}' > "$STATE_FILE"
+  CUR_STAGE="$1"; CUR_ATTEMPT="${2:-0}"; CUR_STEP="${3:-$1}"
+  local status="${4:-running}" code="${5:-null}"
+  jq -n --arg f "$FEATURE" --arg s "$CUR_STAGE" --arg st "$CUR_STEP" --argjson a "$CUR_ATTEMPT" \
+        --arg b "$BRANCH" --arg status "$status" --argjson code "$code" \
+        --arg lr "$LAST_ROLE" --arg lres "$LAST_RESULT" --arg lsum "$LAST_SUMMARY" \
+        --arg ts "$(date -u +%FT%TZ)" \
+    '{feature:$f, stage:$s, step:$st, attempt:$a, max_attempts:'"$MAX_ATTEMPTS"', branch:$b,
+      status:$status, exit_code:$code, last_role:$lr, last_result:$lres, last_summary:$lsum,
+      updated_at:$ts}' > "$STATE_FILE"
 }
 
 # Canonical pipeline order, used to validate WORKFLOW_STATE.json before each
@@ -98,6 +126,8 @@ assert_checkpoint() {
     log "checkpoint: --force given, skipping state validation for stage '$expected'"
     return 0
   fi
+  # --resume/--from already validated the start point; later stages follow normally.
+  (( START_VALIDATED )) && return 0
   [[ -f "$STATE_FILE" ]] || return 0
 
   local state_feature state_branch state_stage
@@ -107,11 +137,11 @@ assert_checkpoint() {
 
   if [[ -n "$state_feature" && "$state_feature" != "$FEATURE" ]]; then
     log "ERROR: $STATE_FILE belongs to feature '$state_feature', not '$FEATURE'. Refusing to run stage '$expected'. Re-run with --force to override."
-    exit 3
+    KEEP_STATE=1; exit 3
   fi
   if [[ -n "$state_branch" && "$state_branch" != "$BRANCH" ]]; then
     log "ERROR: $STATE_FILE recorded branch '$state_branch', not '$BRANCH'. Refusing to run stage '$expected'. Re-run with --force to override."
-    exit 3
+    KEEP_STATE=1; exit 3
   fi
 
   local cur_idx exp_idx
@@ -121,12 +151,12 @@ assert_checkpoint() {
     return 0
   fi
   if (( cur_idx > exp_idx )); then
-    log "ERROR: $STATE_FILE shows stage '$state_stage', which is past '$expected'. Refusing to re-run an earlier stage after a later one already ran. Re-run with --force to override."
-    exit 3
+    log "ERROR: $STATE_FILE shows stage '$state_stage', which is past '$expected'. Refusing to re-run an earlier stage after a later one already ran. Use --resume to continue from '$state_stage', or --force to override."
+    KEEP_STATE=1; exit 3
   fi
   if (( cur_idx < exp_idx - 1 )); then
     log "ERROR: $STATE_FILE shows stage '$state_stage', which is more than one stage behind '$expected'. Refusing to skip required intermediate stage(s). Re-run with --force to override."
-    exit 3
+    KEEP_STATE=1; exit 3
   fi
 }
 
@@ -152,8 +182,8 @@ log_cost() {
   if [[ ! -f "$COST_FILE" ]]; then
     { echo "# Token Cost & Timing Log: $FEATURE"
       echo
-      echo "| Role | Attempt | Model(s) | Duration (ms) | Input Tok | Output Tok | Cache Read Tok | Cost (USD) | Turns | CLI Outcome |"
-      echo "|---|---|---|---|---|---|---|---|---|---|"
+      echo "| Role | Attempt | Model(s) | Duration (ms) | Input Tok | Output Tok | Cache Read Tok | Cost (USD) | Turns | CLI Outcome | Result |"
+      echo "|---|---|---|---|---|---|---|---|---|---|---|"
     } > "$COST_FILE"
   fi
   local models duration in_tok out_tok cache_tok cost turns
@@ -164,8 +194,9 @@ log_cost() {
   out_tok=$(jq -r '.usage.output_tokens // 0' "$src" 2>/dev/null)
   cache_tok=$(jq -r '.usage.cache_read_input_tokens // 0' "$src" 2>/dev/null)
   cost=$(jq -r '.total_cost_usd // 0' "$src" 2>/dev/null)
-  printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
-    "$role" "$attempt" "${models:-?}" "${duration:-0}" "${in_tok:-0}" "${out_tok:-0}" "${cache_tok:-0}" "${cost:-0}" "${turns:-?}" "${outcome:-?}" >> "$COST_FILE"
+  local res; res=$(result_field result)
+  printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+    "$role" "$attempt" "${models:-?}" "${duration:-0}" "${in_tok:-0}" "${out_tok:-0}" "${cache_tok:-0}" "${cost:-0}" "${turns:-?}" "${outcome:-?}" "${res:-none}" >> "$COST_FILE"
 }
 
 append_cost_total() {
@@ -175,7 +206,23 @@ append_cost_total() {
   total=$(awk -F'|' '{v=$9; gsub(/^[ \t]+|[ \t]+$/,"",v); if (v ~ /^[0-9.]+$/) sum+=v} END{printf "%.6f", sum+0}' "$COST_FILE")
   printf '\n**Total cost: $%s USD**\n' "$total" >> "$COST_FILE"
 }
-trap append_cost_total EXIT
+on_exit() {
+  local rc="$1" status
+  append_cost_total
+  (( KEEP_STATE )) && return 0
+  [[ -n "$CUR_STAGE" ]] || return 0
+  case "$rc" in
+    0) status="done" ;;
+    2) status="escalated" ;;
+    4) status="infra_error" ;;
+    *) status="failed" ;;
+  esac
+  [[ "$CUR_STAGE" == "done" ]] && status="done"
+  write_state "$CUR_STAGE" "$CUR_ATTEMPT" "$CUR_STEP" "$status" "$rc"
+  (( rc != 0 )) && log "state: $status at stage '$CUR_STAGE' (step '$CUR_STEP'). Fix, then: orchestrate.sh $FEATURE --resume  (or --from <stage>)"
+  return 0
+}
+trap 'on_exit $?' EXIT
 
 # Classifies a finished claude -p call. Echoes "<class> <reason>" where class is:
 #   ok     — CLI completed normally
@@ -216,9 +263,12 @@ run_agent() {
     --output-format json > "$out" || rc=$?
   cls=$(classify_cli "$rc" "$out")
   cls_kind="${cls%% *}"; cls_reason="${cls#* }"
+  LAST_ROLE="$role"
+  LAST_RESULT="$(result_field result)"; LAST_RESULT="${LAST_RESULT:-none}"
+  LAST_SUMMARY="$(result_field summary)"; LAST_SUMMARY="${LAST_SUMMARY:-$cls_kind: $cls_reason}"
   log_cost "$role" "$attempt" "$out" "$cls_kind: $cls_reason"
   if [[ "$cls_kind" == "infra" ]]; then
-    log "ERROR: $role — infrastructure failure ($cls_reason). Nothing wrong with the agent's work; re-run later (use --force to resume this stage)."
+    log "ERROR: $role — infrastructure failure ($cls_reason). Nothing wrong with the agent's work; re-run later with --resume."
     exit 4
   fi
   if [[ ! -f "$RESULT_FILE" ]]; then
@@ -229,6 +279,45 @@ run_agent() {
   return 0
 }
 
+# --- Resolve start stage (--resume / --from) ---
+START_STAGE="spec"
+START_VALIDATED=0
+state_get() { jq -r ".$1 // empty" "$STATE_FILE" 2>/dev/null; }
+if (( RESUME )) || [[ -n "$FROM_STAGE" ]]; then
+  if [[ -f "$STATE_FILE" ]]; then
+    if [[ "$(state_get feature)" != "$FEATURE" ]] && (( ! FORCE )); then
+      log "ERROR: $STATE_FILE belongs to feature '$(state_get feature)', not '$FEATURE'. Use --force to override."
+      KEEP_STATE=1; exit 3
+    fi
+    rec_stage="$(state_get stage)"; rec_status="$(state_get status)"
+  elif (( ! FORCE )); then
+    log "ERROR: no $STATE_FILE to resume from. Use --from <stage> --force to start mid-pipeline anyway."
+    KEEP_STATE=1; exit 3
+  fi
+  if (( RESUME )); then
+    [[ -n "${rec_stage:-}" ]] || { log "ERROR: --resume needs a recorded stage in $STATE_FILE"; KEEP_STATE=1; exit 3; }
+    if [[ "${rec_status:-}" == "done" || "$rec_stage" == "done" ]]; then
+      log "Feature $FEATURE already done — nothing to resume."; KEEP_STATE=1; exit 0
+    fi
+    START_STAGE="$rec_stage"
+  else
+    START_STAGE="$FROM_STAGE"
+    if (( $(stage_index "$START_STAGE") < 0 )) || [[ "$START_STAGE" == "done" ]]; then
+      log "ERROR: unknown stage '$START_STAGE' (valid: spec unit_test dev reviewer e2e)"; KEEP_STATE=1; exit 3
+    fi
+    if [[ -n "${rec_stage:-}" ]] && (( ! FORCE )) && (( $(stage_index "$START_STAGE") > $(stage_index "$rec_stage") )); then
+      log "ERROR: --from $START_STAGE is past the recorded stage '$rec_stage' — that would skip unfinished work. Use --force to override."
+      KEEP_STATE=1; exit 3
+    fi
+  fi
+  if [[ "$START_STAGE" != "spec" && ! -f "$PLAN_FILE" ]]; then
+    log "ERROR: cannot start at '$START_STAGE' — $PLAN_FILE does not exist."; KEEP_STATE=1; exit 3
+  fi
+  START_VALIDATED=1
+  log "starting at stage '$START_STAGE' (recorded: ${rec_stage:-none}/${rec_status:-none}); earlier stages skipped, attempt counters reset"
+fi
+should_run() { (( $(stage_index "$1") >= $(stage_index "$START_STAGE") )); }
+
 git rev-parse --verify "$BRANCH" >/dev/null 2>&1 && git checkout -q "$BRANCH" || git checkout -q -b "$BRANCH"
 
 # --- Spec ---
@@ -236,7 +325,7 @@ git rev-parse --verify "$BRANCH" >/dev/null 2>&1 && git checkout -q "$BRANCH" ||
 # blocked); the orchestrator archives a copy into $CTX after a successful spec.
 REQUEST_FILE="$PIPELINE/REQUEST_${FEATURE}.md"
 ARCHIVED_REQUEST_FILE="$CTX/REQUEST_${FEATURE}.md"
-if [[ ! -f "$PLAN_FILE" ]]; then
+if should_run spec && { [[ ! -f "$PLAN_FILE" ]] || [[ "$FROM_STAGE" == "spec" ]]; }; then
   if [[ ! -f "$REQUEST_FILE" ]]; then
     log "Neither $PLAN_FILE nor $REQUEST_FILE exists."
     log "Write the feature requirements in plain English to $REQUEST_FILE, then re-run."
@@ -259,11 +348,12 @@ EOF
   cp "$DRAFT_PLAN_FILE" "$PLAN_FILE"
   cp "$REQUEST_FILE" "$ARCHIVED_REQUEST_FILE"
   commit_stage "spec: draft $PLAN_FILE from $REQUEST_FILE"
-else
+elif should_run spec; then
   log "$PLAN_FILE already exists, skipping spec stage"
 fi
 
 # --- Unit Test (write failing tests) ---
+if should_run unit_test; then
 assert_checkpoint "unit_test"
 write_state "unit_test"
 run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $PLAN_FILE section 4 (Test Scenarios).
@@ -272,17 +362,20 @@ Run mvn test and confirm the new tests fail for the expected reason, not a compi
 Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs written>\"}."
 [[ "$(result_field result)" == "PASS" ]] || { log "unit_test stage failed: $(result_field summary)"; exit 1; }
 commit_stage "test: add failing tests for $FEATURE"
+fi
 
 # Runs dev-agent until it reports PASS, up to <max> attempts. Commits on PASS;
 # exits 2 (escalate to human) on exhaustion. Shared by the main Dev stage and
 # the review-fix loop so the reviewer only ever sees green code.
-#   run_dev_until_green <base_prompt> <commit_msg> <max_attempts> <label>
+#   run_dev_until_green <base_prompt> <commit_msg> <max_attempts> <label> [state_stage]
+# state_stage is what WORKFLOW_STATE.json records (review-fix rounds record
+# "reviewer", so --resume restarts the review loop rather than the main Dev stage).
 run_dev_until_green() {
-  local base_prompt="$1" commit_msg="$2" max="$3" label="$4"
+  local base_prompt="$1" commit_msg="$2" max="$3" label="$4" st_stage="${5:-dev}"
   local attempt=0 feedback=""
   while true; do
     attempt=$((attempt + 1))
-    write_state "dev" "$attempt"
+    write_state "$st_stage" "$attempt" "dev"
     run_agent "dev-agent" "$base_prompt
 $feedback
 Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line>\"}." "${label}${attempt}"
@@ -300,20 +393,24 @@ Write $RESULT_FILE as {\"stage\":\"dev\",\"result\":\"PASS|FAIL\",\"summary\":\"
 }
 
 # --- Dev (retry loop) ---
+if should_run dev; then
 assert_checkpoint "dev"
 run_dev_until_green "Follow .claude/rules/dev.md. Read $PLAN_FILE sections 1-3.
 Implement production code so all tests for feature $FEATURE pass. Run mvn test to verify." \
   "feat: implement $FEATURE" "$MAX_ATTEMPTS" ""
+fi
 
 # --- Reviewer (retry loop: REQUEST_CHANGES -> encode as tests -> Dev fixes) ---
+if should_run reviewer; then
 assert_checkpoint "reviewer"
 round=0
 while true; do
   round=$((round + 1))
-  write_state "reviewer" "$round"
+  write_state "reviewer" "$round" "review"
   run_agent "reviewer-agent" "Follow .claude/rules/reviewer.md. Compare \`git diff main...$BRANCH\` against $PLAN_FILE.
 Write your verdict to $DRAFT_REVIEW_FILE.
 Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary\":\"APPROVE or REQUEST_CHANGES, one line\"}." "$round"
+  [[ -f "$DRAFT_REVIEW_FILE" ]] || { log "ERROR: reviewer did not write $DRAFT_REVIEW_FILE"; exit 1; }
   cp "$DRAFT_REVIEW_FILE" "$REVIEW_FILE"
   commit_stage "review: round $round verdict for $FEATURE ($(result_field summary))"
   if [[ "$(result_field result)" == "PASS" ]]; then
@@ -324,7 +421,7 @@ Write $RESULT_FILE as {\"stage\":\"reviewer\",\"result\":\"PASS|FAIL\",\"summary
     log "reviewer requested changes $MAX_ATTEMPTS times — escalating to human. See $REVIEW_FILE"
     exit 2
   fi
-  write_state "unit_test" "$round"
+  write_state "reviewer" "$round" "encode_tests"
   run_agent "unit-test-agent" "Follow .claude/rules/testing.md. Read $REVIEW_FILE.
 For every blocking [CRITICAL]/[HIGH] issue describing a correctness or behavior gap, add or strengthen tests in src/test/java that encode the correct expected behavior. Do not modify src/main/java. mvn test may legitimately fail against the current (buggy) implementation — that is expected.
 Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, note test IDs added/changed>\"}." "$round"
@@ -335,8 +432,9 @@ Write $RESULT_FILE as {\"stage\":\"unit_test\",\"result\":\"PASS|FAIL\",\"summar
   commit_stage "test: encode review feedback for $FEATURE (round $round)"
   run_dev_until_green "Follow .claude/rules/dev.md. Reviewer requested changes, see $REVIEW_FILE.
 Address every point, then run mvn test." \
-    "fix: address review feedback for $FEATURE (round $round)" "$MAX_FIX_ATTEMPTS" "r${round}."
+    "fix: address review feedback for $FEATURE (round $round)" "$MAX_FIX_ATTEMPTS" "r${round}." "reviewer"
 done
+fi
 
 # --- E2E ---
 assert_checkpoint "e2e"
