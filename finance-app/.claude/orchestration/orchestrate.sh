@@ -33,15 +33,15 @@ MAX_ATTEMPTS=3
 # Dev attempts per review-fix round (worst case: 3 rounds x 2 = 6 extra dev calls).
 MAX_FIX_ATTEMPTS=2
 
-# Model assignment per pipeline role.
-# reviewer-agent uses Haiku (read-only diff scan — no code generation needed).
-# All other roles use Sonnet (code writing, test authoring, planning).
+# Model assignment per pipeline role — pinned in models.env (env overrides win).
+# shellcheck source=models.env
+source "$REPO_ROOT/finance-app/.claude/orchestration/models.env"
 declare -A AGENT_MODEL=(
-  [spec-agent]="claude-sonnet-4-6"
-  [unit-test-agent]="claude-sonnet-4-6"
-  [dev-agent]="claude-sonnet-4-6"
-  [reviewer-agent]="claude-haiku-4-5-20251001"
-  [e2e-agent]="claude-sonnet-4-6"
+  [spec-agent]="$SPEC_MODEL"
+  [unit-test-agent]="$UNIT_TEST_MODEL"
+  [dev-agent]="$DEV_MODEL"
+  [reviewer-agent]="$REVIEWER_MODEL"
+  [e2e-agent]="$E2E_MODEL"
 )
 
 # Per-role turn cap (each tool call = one turn). Override all with MAX_TURNS=<n>.
@@ -204,7 +204,7 @@ classify_cli() {
 # role, prompt, attempt -> runs headless, requires the agent to write $RESULT_FILE
 run_agent() {
   local role="$1" prompt="$2" attempt="${3:-1}"
-  local model="${AGENT_MODEL[$role]:-claude-sonnet-4-6}"
+  local model="${AGENT_MODEL[$role]:?no model configured for $role in models.env}"
   local turns="${MAX_TURNS:-${AGENT_MAX_TURNS[$role]:-30}}"
   local out="$PIPELINE/.last_${role}.json" rc=0 cls cls_kind cls_reason
   rm -f "$RESULT_FILE"

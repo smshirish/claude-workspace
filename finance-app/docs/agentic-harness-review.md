@@ -58,6 +58,7 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 ### 5. Outdated model IDs — MEDIUM
 - `AGENT_MODEL` hardcodes `claude-sonnet-4-6` and `claude-haiku-4-5-20251001`.
 - **Fix:** move these to a config file or env vars (`SPEC_MODEL`, `DEV_MODEL`, …) and pick current models. Consider a stronger model for Spec and Reviewer, where the quality of judgement matters most, and the cheaper tier for E2E/test scaffolding.
+- **Status: FIXED (B + ii).** Models are pinned in `.claude/orchestration/models.env` with per-role env overrides (`SPEC_MODEL`, `DEV_MODEL`, …): Opus 5.5 for spec and reviewer, Sonnet 5.5 for unit-test, dev and e2e. A missing model now fails loudly instead of falling back silently.
 
 ### 6. No resume after escalation — MEDIUM
 - After `exit 2` (Dev or Reviewer max attempts), finishing is entirely manual; this is what happened with Feature B, round 4.
