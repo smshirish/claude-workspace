@@ -292,13 +292,14 @@ done
 assert_checkpoint "e2e"
 write_state "e2e"
 run_agent "e2e-agent" "Follow .claude/rules/e2e.md. Read $PLAN_FILE section 5.
-Start the backend (bin/start.sh, background) if not already running, then write/run Playwright specs for $FEATURE (run `source bin/env.sh` first so ADMIN_PASSWORD is set).
+Start the backend (bin/start.sh, background) if not already running, then write/run Playwright specs for $FEATURE (run \`source bin/env.sh\` first so ADMIN_PASSWORD is set).
 Write $RESULT_FILE as {\"stage\":\"e2e\",\"result\":\"PASS|FAIL\",\"summary\":\"<one line, e.g. 8/8 passed>\"}."
-commit_stage "test(e2e): add e2e specs for $FEATURE"
 if [[ "$(result_field result)" != "PASS" ]]; then
+  commit_stage "test(e2e): add e2e specs for $FEATURE (FAILING: $(result_field summary))"
   log "E2E failed: $(result_field summary) — inspect $PIPELINE/.last_e2e-agent.json; route back to dev or unit-test manually"
   exit 2
 fi
+commit_stage "test(e2e): add e2e specs for $FEATURE"
 
 write_state "done"
 log "Feature $FEATURE complete on branch $BRANCH."

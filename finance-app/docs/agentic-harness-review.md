@@ -46,6 +46,7 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 ### 3. E2E commits before checking result — MEDIUM
 - `commit_stage "test(e2e): ..."` runs before the PASS/FAIL check, so failing specs get committed.
 - This may be deliberate, to keep the failing specs as evidence. If so, use a commit message that says so (e.g. `test(e2e): add specs for X (FAILING)`).
+- **Status: FIXED (Option B).** On FAIL the commit is `test(e2e): add e2e specs for X (FAILING: <summary>)`, then exit 2. On PASS the commit message is unchanged.
 
 ### 4. CLI failures swallowed — MEDIUM
 - `claude -p ... > .last_<role>.json || true` hides auth errors, rate limits and timeouts. The only signal left is "exited without writing RESULT.json".
