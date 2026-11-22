@@ -5,6 +5,9 @@
 # not by prompt convention.
 #
 # Usage: orchestrate.sh <FeatureName> [--force|-f]
+# Env: MAX_TURNS=<n> (override all per-role turn caps), AGENT_TIMEOUT=<dur> (default 30m)
+# Exit codes: 0 done, 1 stage failed, 2 escalate to human, 3 checkpoint mismatch,
+#             4 infrastructure failure (auth/network/rate limit) — retry later
 # Before each stage, WORKFLOW_STATE.json (if present) is checked to confirm
 # this feature/branch is at or just before that stage — this catches stale
 # state left over from an escalated run (exit 2) or a state file for a
@@ -40,6 +43,17 @@ declare -A AGENT_MODEL=(
   [reviewer-agent]="claude-haiku-4-5-20251001"
   [e2e-agent]="claude-sonnet-4-6"
 )
+
+# Per-role turn cap (each tool call = one turn). Override all with MAX_TURNS=<n>.
+declare -A AGENT_MAX_TURNS=(
+  [spec-agent]=20
+  [unit-test-agent]=30
+  [dev-agent]=40
+  [reviewer-agent]=15
+  [e2e-agent]=40
+)
+# Wall-clock cap per agent call (coreutils `timeout` syntax).
+AGENT_TIMEOUT="${AGENT_TIMEOUT:-30m}"
 
 FORCE=0
 ARGS=()
@@ -134,23 +148,24 @@ COST_FILE="$CTX/COST_${FEATURE}.md"
 # `> $PIPELINE/.last_<role>.json` redirection truncates the snapshot the instant
 # the next call for that role launches.
 log_cost() {
-  local role="$1" attempt="$2" src="$3"
+  local role="$1" attempt="$2" src="$3" outcome="${4:-}"
   if [[ ! -f "$COST_FILE" ]]; then
     { echo "# Token Cost & Timing Log: $FEATURE"
       echo
-      echo "| Role | Attempt | Model(s) | Duration (ms) | Input Tok | Output Tok | Cache Read Tok | Cost (USD) |"
-      echo "|---|---|---|---|---|---|---|---|"
+      echo "| Role | Attempt | Model(s) | Duration (ms) | Input Tok | Output Tok | Cache Read Tok | Cost (USD) | Turns | CLI Outcome |"
+      echo "|---|---|---|---|---|---|---|---|---|---|"
     } > "$COST_FILE"
   fi
-  local models duration in_tok out_tok cache_tok cost
+  local models duration in_tok out_tok cache_tok cost turns
+  turns=$(jq -r '.num_turns // "?"' "$src" 2>/dev/null)
   models=$(jq -r '(.modelUsage // {}) | keys | join(",")' "$src" 2>/dev/null)
   duration=$(jq -r '.duration_ms // 0' "$src" 2>/dev/null)
   in_tok=$(jq -r '.usage.input_tokens // 0' "$src" 2>/dev/null)
   out_tok=$(jq -r '.usage.output_tokens // 0' "$src" 2>/dev/null)
   cache_tok=$(jq -r '.usage.cache_read_input_tokens // 0' "$src" 2>/dev/null)
   cost=$(jq -r '.total_cost_usd // 0' "$src" 2>/dev/null)
-  printf '| %s | %s | %s | %s | %s | %s | %s | %s |\n' \
-    "$role" "$attempt" "${models:-?}" "${duration:-0}" "${in_tok:-0}" "${out_tok:-0}" "${cache_tok:-0}" "${cost:-0}" >> "$COST_FILE"
+  printf '| %s | %s | %s | %s | %s | %s | %s | %s | %s | %s |\n' \
+    "$role" "$attempt" "${models:-?}" "${duration:-0}" "${in_tok:-0}" "${out_tok:-0}" "${cache_tok:-0}" "${cost:-0}" "${turns:-?}" "${outcome:-?}" >> "$COST_FILE"
 }
 
 append_cost_total() {
@@ -162,21 +177,56 @@ append_cost_total() {
 }
 trap append_cost_total EXIT
 
+# Classifies a finished claude -p call. Echoes "<class> <reason>" where class is:
+#   ok     — CLI completed normally
+#   agent  — agent-side problem (turn cap, timeout, execution error)
+#   infra  — CLI/API problem (auth, network, rate limit, crash/no JSON); retry later
+classify_cli() {
+  local rc="$1" out="$2" is_err subtype text
+  if (( rc == 124 )); then echo "agent timeout_after_${AGENT_TIMEOUT}"; return; fi
+  if ! jq -e . "$out" >/dev/null 2>&1; then echo "infra cli_rc=${rc}_no_json_output"; return; fi
+  is_err=$(jq -r '.is_error // false' "$out")
+  subtype=$(jq -r '.subtype // "unknown"' "$out")
+  text=$(jq -r '.result // ""' "$out" | head -c 300)
+  if [[ "$subtype" == "error_max_turns" ]]; then echo "agent error_max_turns"; return; fi
+  if [[ "$is_err" == "true" ]]; then
+    if grep -qiE 'api error|authentication|unauthori[sz]ed|rate.?limit|overloaded|529|ECONN|ETIMEDOUT|network' <<<"$text"; then
+      echo "infra ${subtype}: ${text//$'\n'/ }"
+    else
+      echo "agent ${subtype}"
+    fi
+    return
+  fi
+  if (( rc != 0 )); then echo "infra cli_rc=${rc}"; return; fi
+  echo "ok ${subtype}"
+}
+
 # role, prompt, attempt -> runs headless, requires the agent to write $RESULT_FILE
 run_agent() {
   local role="$1" prompt="$2" attempt="${3:-1}"
   local model="${AGENT_MODEL[$role]:-claude-sonnet-4-6}"
+  local turns="${MAX_TURNS:-${AGENT_MAX_TURNS[$role]:-30}}"
+  local out="$PIPELINE/.last_${role}.json" rc=0 cls cls_kind cls_reason
   rm -f "$RESULT_FILE"
-  claude -p "$prompt" \
+  timeout "$AGENT_TIMEOUT" claude -p "$prompt" \
     --model "$model" \
     --settings "$SETTINGS/${role}.settings.json" \
     --permission-mode acceptEdits \
-    --output-format json > "$PIPELINE/.last_${role}.json" || true
-  log_cost "$role" "$attempt" "$PIPELINE/.last_${role}.json"
+    --max-turns "$turns" \
+    --output-format json > "$out" || rc=$?
+  cls=$(classify_cli "$rc" "$out")
+  cls_kind="${cls%% *}"; cls_reason="${cls#* }"
+  log_cost "$role" "$attempt" "$out" "$cls_kind: $cls_reason"
+  if [[ "$cls_kind" == "infra" ]]; then
+    log "ERROR: $role — infrastructure failure ($cls_reason). Nothing wrong with the agent's work; re-run later (use --force to resume this stage)."
+    exit 4
+  fi
   if [[ ! -f "$RESULT_FILE" ]]; then
-    log "ERROR: $role exited without writing RESULT.json — see $PIPELINE/.last_${role}.json"
+    log "ERROR: $role exited without writing RESULT.json ($cls_kind: $cls_reason, turns cap=$turns) — see $out"
     exit 1
   fi
+  [[ "$cls_kind" == "agent" ]] && log "WARN: $role reported a result despite CLI outcome '$cls_reason' — trusting RESULT.json"
+  return 0
 }
 
 git rev-parse --verify "$BRANCH" >/dev/null 2>&1 && git checkout -q "$BRANCH" || git checkout -q -b "$BRANCH"

@@ -53,6 +53,7 @@ The pipeline design is solid. It runs each stage as an isolated headless `claude
 - If the CLI crashes after a stale `RESULT.json` exists, `rm -f` protects you, but the logs still don't tell a crash apart from an agent mistake.
 - **Fix:** capture the exit code and log it, and check `.is_error` / `.subtype` in the JSON output before reading `RESULT.json`.
 - Also worth adding: `--max-turns` per role, and a wall-clock `timeout` wrapper, so a stuck agent can't burn tokens indefinitely.
+- **Status: FIXED (Option A).** The CLI exit code is captured and classified (`ok` / `agent` / `infra`). Infra failures exit 4 (retry later). Per-role `--max-turns` (spec 20, unit-test 30, dev 40, reviewer 15, e2e 40; `MAX_TURNS` overrides all) and a `timeout` wrapper (`AGENT_TIMEOUT`, default 30m) added. The COST table gains Turns and CLI Outcome columns. **Tune the caps** to about 1.5× the observed turns after the first real run.
 
 ### 5. Outdated model IDs — MEDIUM
 - `AGENT_MODEL` hardcodes `claude-sonnet-4-6` and `claude-haiku-4-5-20251001`.
